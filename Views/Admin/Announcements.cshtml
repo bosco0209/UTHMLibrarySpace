@@ -1,0 +1,67 @@
+﻿@model AdminAnnouncementsVm
+@{
+    ViewData["Title"] = "Announcements";
+}
+<section class="page-head admin-head">
+    <div class="container-xl">
+        <div class="eyebrow text-warning">PTTA command center</div>
+        <h1 class="page-title text-white">Announcements & notifications</h1>
+    </div>
+</section>
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <form asp-action="SaveAnnouncement" method="post" class="panel sticky-lg-top" style="top:96px" data-testid="announcement-form">
+                <h3 class="h6 fw-bold mb-3">@(Model.Form.Id is null ? "New announcement" : "Edit announcement")</h3>
+                <input type="hidden" asp-for="Form.Id" />
+                <div class="mb-3"><label class="form-label small fw-semibold">Title</label><input asp-for="Form.Title" class="form-control" placeholder="e.g. Hall closed for maintenance" data-testid="announcement-title-input" /></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Message</label><textarea asp-for="Form.Message" rows="4" class="form-control" data-testid="announcement-message-input"></textarea></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-7"><label class="form-label small fw-semibold">Type</label><select asp-for="Form.Kind" asp-items="Html.GetEnumSelectList<AnnouncementKind>()" class="form-select" data-testid="announcement-kind-select"></select></div>
+                    <div class="col-5 d-flex align-items-end"><div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" asp-for="Form.IsActive" data-testid="announcement-active-switch" /><label class="form-check-label small" asp-for="Form.IsActive">Show in banner</label></div></div>
+                </div>
+                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="notifyUsers" value="true" id="notifyUsers" data-testid="announcement-notify-checkbox" /><label class="form-check-label small" for="notifyUsers">Also send as a notification to all students & lecturers</label></div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-navy rounded-pill px-4" data-testid="announcement-save-button">@(Model.Form.Id is null ? "Publish" : "Save changes")</button>
+                    @if (Model.Form.Id is not null)
+                    {
+                        <a asp-action="Announcements" class="btn btn-light rounded-pill">Cancel</a>
+                    }
+                </div>
+            </form>
+        </div>
+        <div class="col-lg-7 d-grid gap-3 align-content-start" data-testid="announcement-list">
+            @if (!Model.Items.Any())
+            {
+                <div class="empty-state">No announcements yet.</div>
+            }
+            @foreach (var a in Model.Items)
+            {
+                <div class="panel announce-card kind-@a.Kind.ToString().ToLower()" data-testid="announcement-item-@a.Id">
+                    <div class="d-flex justify-content-between gap-3">
+                        <div class="d-flex gap-3">
+                            <span class="announce-icon"><i class="bi @Ui.AnnouncementIcon(a.Kind)"></i></span>
+                            <div>
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-1"><strong>@a.Title</strong>@if (a.IsActive) {
+                                    <span class="pill pill-confirmed">Live</span>
+                                } else
+                                {
+
+                                    <span class="pill pill-muted">Hidden</span>
+                                }
+                            </div>
+                            <div class="small text-secondary">@a.Message</div>
+                            <div class="small text-secondary mt-1">@a.Kind · @AppClock.ToLocal(a.CreatedAt).ToString("dd MMM yyyy, HH:mm")</div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+                        <a asp-action="Announcements" asp-route-edit="@a.Id" class="btn btn-sm btn-light rounded-pill" data-testid="announcement-edit-button-@a.Id"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="DeleteAnnouncement" asp-route-id="@a.Id" method="post" onsubmit="return confirm('Delete this announcement?')"><button class="btn btn-sm btn-outline-danger rounded-pill" data-testid="announcement-delete-button-@a.Id"><i class="bi bi-trash"></i></button></form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+</section>

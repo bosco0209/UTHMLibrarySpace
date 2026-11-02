@@ -1,0 +1,27 @@
+﻿@{
+    var c = ViewContext.RouteData.Values["action"]?.ToString();
+    string A(string a) => c == a || (a == "Facilities" && c == "FacilityForm") ? "active" : "";
+}
+<div class="admin-tabs mb-4" data-testid="admin-tabs">
+    <a asp-action="Index" class="@A("Index")" data-testid="admin-tab-overview"><i class="bi bi-speedometer2"></i>Overview</a>
+    <a asp-action="Bookings" class="@A("Bookings")" data-testid="admin-tab-bookings"><i class="bi bi-calendar2-check"></i>Bookings & Approvals</a>
+    <a asp-action="Facilities" class="@A("Facilities")" data-testid="admin-tab-facilities"><i class="bi bi-door-open"></i>Rooms</a>
+    <a asp-action="Limits" class="@A("Limits")" data-testid="admin-tab-limits"><i class="bi bi-sliders"></i>Booking Rules</a>
+    <a asp-action="Users" class="@A("Users")" data-testid="admin-tab-users"><i class="bi bi-people"></i>Users</a>
+    <a asp-action="Announcements" class="@A("Announcements")" data-testid="admin-tab-announcements"><i class="bi bi-megaphone"></i>Announcements</a>
+    <a asp-controller="Admin" asp-action="Feedback"
+       class="admin-tab @(ViewContext.RouteData.Values["action"]?.ToString() == "Feedback" ? "active" : "")"
+       data-testid="admin-nav-feedback">
+        <i class="bi bi-chat-left-text me-1"></i>Feedback
+    </a>
+    <a asp-controller="Admin" asp-action="WalkIn"
+       class="admin-tab @(ViewContext.RouteData.Values["action"]?.ToString() == "WalkIn" ? "active" : "")"
+       data-testid="admin-nav-walkin">
+        <i class="bi bi-person-plus me-1"></i>Walk-in booking
+    </a>
+    <a asp-controller="Admin" asp-action="KeyReturns"
+       class="admin-tab @(ViewContext.RouteData.Values["action"]?.ToString() == "KeyReturns" ? "active" : "")"
+       data-testid="admin-nav-keyreturns">
+        <i class="bi bi-key me-1"></i>Key returns
+    </a>
+</div>

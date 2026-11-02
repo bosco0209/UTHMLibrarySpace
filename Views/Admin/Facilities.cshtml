@@ -1,0 +1,171 @@
+﻿@model List<Facility>
+@{
+    ViewData["Title"] = "Manage facilities";
+    var usage = ViewBag.Usage as Dictionary<int, int> ?? new();
+    var counts = ViewBag.Counts as Dictionary<FacilityType, int> ?? new();
+    var current = ViewBag.Type as FacilityType?;
+    var groups = FacilityRules.All.Keys.Where(t => current is null || t == current).ToList();
+}
+<section class="page-head admin-head">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow text-warning">PTTA command center</div>
+            <h1 class="page-title text-white">Room management</h1>
+            <p class="text-white-50 mb-0">@counts.Values.Sum() rooms across @FacilityRules.All.Count categories</p>
+        </div>
+        @if (current is { } topType)
+        {
+            var topRule = FacilityRules.For(topType);
+            <a asp-action="FacilityForm" asp-route-type="@topType"
+               class="btn btn-sm btn-outline-navy rounded-pill px-3 ms-auto"
+               data-testid="admin-add-facility-@Ui.TypeSlug(topType)">
+                <i class="bi bi-plus-lg me-1"></i>Add @topRule.Label.ToLower()
+            </a>
+            <a asp-action="Limits" asp-route-type="@topType"
+               class="btn btn-sm btn-light rounded-pill px-3"
+               data-testid="admin-category-limits-@Ui.TypeSlug(topType)">
+                <i class="bi bi-sliders me-1"></i>Rules
+            </a>
+        }
+    </div>
+</section>
+
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <div class="cat-grid mb-4" data-testid="admin-facility-categories">
+        <a asp-action="Facilities"
+           class="cat-tile @(current is null ? "active" : "")"
+           data-testid="admin-category-all">
+            <span class="cat-icon"><i class="bi bi-grid-3x3-gap"></i></span>
+            <span class="cat-name">All rooms</span>
+            <span class="cat-count mono">@counts.Values.Sum()</span>
+        </a>
+        @foreach (var kv in FacilityRules.All)
+        {
+            <a asp-action="Facilities" asp-route-type="@kv.Key"
+               class="cat-tile tile-@Ui.TypeSlug(kv.Key) @(current == kv.Key ? "active" : "")"
+               data-testid="admin-category-@Ui.TypeSlug(kv.Key)">
+                <span class="cat-icon"><i class="bi @kv.Value.Icon"></i></span>
+                <span class="cat-name">@kv.Value.Plural</span>
+                <span class="cat-count mono">@counts.GetValueOrDefault(kv.Key)</span>
+            </a>
+        }
+    </div>
+
+    @foreach (var t in groups)
+    {
+        var rule = FacilityRules.For(t);
+        var rooms = Model.Where(f => f.Type == t).ToList();
+        <div class="panel p-0 overflow-hidden mb-4" data-testid="admin-category-section-@Ui.TypeSlug(t)">
+            <div class="cat-head">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="cat-icon lg tile-@Ui.TypeSlug(t)"><i class="bi @rule.Icon"></i></span>
+                    <div>
+                        <h3 class="h5 fw-bold mb-1">@rule.Plural <span class="text-secondary fw-normal">(@rooms.Count)</span></h3>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="meta @(rule.Fee > 0 ? "meta-gold" : "")">
+                                <i class="bi bi-cash-coin"></i>@FacilityRules.FeeText(t)
+                            </span>
+                            <span class="meta"><i class="bi bi-person-check"></i>@FacilityRules.RolesText(t)</span>
+                            <span class="meta">
+                                <i class="bi @(rule.RequiresApproval ? "bi-shield-check" : "bi-lightning-charge")"></i>
+                                @(rule.RequiresApproval ? "Admin approval" : "Instant")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <a asp-action="FacilityForm" asp-route-type="@t"
+                   class="btn btn-sm btn-outline-navy rounded-pill px-3"
+                   data-testid="admin-add-facility-@Ui.TypeSlug(t)">
+                    <i class="bi bi-plus-lg me-1"></i>Add @rule.Label.ToLower()
+                </a>
+            </div>
+            @if (!rooms.Any())
+            {
+                <div class="text-center text-secondary small py-4">No @rule.Plural.ToLower() yet.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table app-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Room</th>
+                                <th>Location</th>
+                                <th>Capacity</th>
+                                <th>Bookings</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var f in rooms)
+                            {
+                                <tr data-testid="admin-facility-row-@f.Code.ToLower()">
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            @if (FacilityRules.ShowsImage(f.Type) && !string.IsNullOrEmpty(f.ImageUrl))
+                                            {
+                                                <img src="@f.ImageUrl" class="thumb" alt="" />
+                                            }
+                                            else
+                                            {
+                                                <span class="thumb thumb-tile tile-@Ui.TypeSlug(f.Type)">
+                                                    <i class="bi @rule.Icon"></i>
+                                                </span>
+                                            }
+                                            <div>
+                                                <div class="fw-semibold small">@f.Name</div>
+                                                <div class="mono small text-secondary">@f.Code</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="small">@f.Location</td>
+                                    <td class="mono small">@f.Capacity</td>
+                                    <td class="mono small">@usage.GetValueOrDefault(f.Id)</td>
+                                    <td>
+                                        @if (f.Status == FacilityStatus.Available)
+                                        {
+                                            <span class="pill pill-confirmed" data-testid="admin-facility-status-@f.Code.ToLower()">
+                                                <i class="bi bi-circle-fill"></i>Available
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="pill pill-muted" data-testid="admin-facility-status-@f.Code.ToLower()">
+                                                <i class="bi bi-tools"></i>Maintenance
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <form asp-action="ToggleMaintenance" asp-route-id="@f.Id" asp-route-type="@current"
+                                              method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-light rounded-pill px-3"
+                                                    data-testid="admin-toggle-maintenance-@f.Code.ToLower()">
+                                                @(f.Status == FacilityStatus.Available ? "Set maintenance" : "Set available")
+                                            </button>
+                                        </form>
+                                        <a asp-action="FacilityForm" asp-route-id="@f.Id"
+                                           class="btn btn-sm btn-outline-navy rounded-pill px-3"
+                                           data-testid="admin-edit-facility-@f.Code.ToLower()">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form asp-action="DeleteFacility" asp-route-id="@f.Id"
+                                              method="post" class="d-inline"
+                                              onsubmit="return confirm('Delete @f.Name?');">
+                                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                                    data-testid="admin-delete-facility-@f.Code.ToLower()">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</section>

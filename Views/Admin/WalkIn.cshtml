@@ -1,0 +1,146 @@
+﻿@model AdminWalkInVm
+@{
+    ViewData["Title"] = "Walk-in booking";
+    var grouped = Model.Facilities.GroupBy(f => f.Type);
+}
+<section class="page-head admin-head">
+    <div class="container-xl">
+        <div class="eyebrow text-warning">PTTA command center</div>
+        <h1 class="page-title text-white">Walk-in booking</h1>
+        <p class="text-white-50 mb-0">Create a booking on behalf of a student or lecturer who is paying at the counter.</p>
+    </div>
+</section>
+
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <form asp-action="WalkIn" method="post" class="panel" style="max-width:860px" data-testid="walkin-form">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="FacilityId" class="form-label small fw-semibold">Facility</label>
+                <select asp-for="FacilityId" id="facilitySelect" class="form-select" required
+                        data-testid="walkin-facility-select">
+                    <option value="">— Choose a room —</option>
+                    @foreach (var g in grouped)
+                    {
+                        <optgroup label="@FacilityRules.For(g.Key).Plural">
+                            @foreach (var f in g)
+                            {
+                                <option value="@f.Id">@f.Name (@f.Code) · @f.Capacity pax</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+                <span asp-validation-for="FacilityId" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="UserId" class="form-label small fw-semibold">Booked on behalf of</label>
+                <select asp-for="UserId" id="userSelect" class="form-select" required
+                        data-testid="walkin-user-select">
+                    <option value="">— Choose a user —</option>
+                    @foreach (var g in Model.Users.GroupBy(u => u.Role))
+                    {
+                        <optgroup label="@g.Key">
+                            @foreach (var u in g)
+                            {
+                                <option value="@u.Id">@u.Name · @u.IdNumber (@u.Role)</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+                <span asp-validation-for="UserId" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Date" class="form-label small fw-semibold">Date</label>
+                <input asp-for="Date" type="date" class="form-control" required
+                       min="@AppClock.Today.ToString("yyyy-MM-dd")"
+                       max="@AppClock.Today.AddDays(60).ToString("yyyy-MM-dd")"
+                       data-testid="walkin-date-input" />
+                <span asp-validation-for="Date" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="StartTime" class="form-label small fw-semibold">Start time</label>
+                <input asp-for="StartTime" type="time" class="form-control mono"
+                       min="08:00" max="21:45" step="900" required
+                       data-testid="walkin-start-input" />
+                <span asp-validation-for="StartTime" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EndTime" class="form-label small fw-semibold">End time</label>
+                <input asp-for="EndTime" type="time" class="form-control mono"
+                       min="08:15" max="22:00" step="900" required
+                       data-testid="walkin-end-input" />
+                <span asp-validation-for="EndTime" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Attendees" class="form-label small fw-semibold">Attendees</label>
+                <input asp-for="Attendees" type="number" class="form-control"
+                       min="1" max="1000" required data-testid="walkin-attendees-input" />
+                <span asp-validation-for="Attendees" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-8">
+                <label asp-for="Purpose" class="form-label small fw-semibold">Purpose</label>
+                <input asp-for="Purpose" class="form-control"
+                       placeholder="e.g. Walk-in study room session"
+                       data-testid="walkin-purpose-input" />
+                <span asp-validation-for="Purpose" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <div class="form-check">
+                    <input asp-for="MarkPaid" class="form-check-input" type="checkbox"
+                           data-testid="walkin-markpaid-checkbox" />
+                    <label asp-for="MarkPaid" class="form-check-label small">
+                        Payment collected at the counter — mark booking as <strong>Paid</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info rounded-4 small mt-3 mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Walk-in bookings are <strong>auto-approved</strong> and don't require proof of payment.
+            The 24-hour payment window is bypassed because payment is collected on-site.
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-navy rounded-pill px-4" data-testid="walkin-submit-button">
+                <i class="bi bi-check2 me-1"></i>Create booking
+            </button>
+            <a asp-action="Index" class="btn btn-light rounded-pill px-4">Cancel</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Facility picker with search
+            new TomSelect('#facilitySelect', {
+                placeholder: 'Search rooms by name or code…',
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                maxOptions: 500,
+                searchField: ['text']
+            });
+
+            // User picker with search (search by name or ID number)
+            new TomSelect('#userSelect', {
+                placeholder: 'Search students or lecturers…',
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                maxOptions: 500,
+                searchField: ['text']
+            });
+        });
+    </script>
+}

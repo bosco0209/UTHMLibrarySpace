@@ -1,0 +1,51 @@
+﻿@model LoginVm
+@{
+    ViewData["Title"] = "Sign in";
+}
+<section class="auth-wrap">
+    <div class="auth-side" style="background-image:url('https://images.unsplash.com/photo-1718327453695-4d32b94c90a4?auto=format&fit=crop&w=1400&q=80')">
+        <div class="auth-side-scrim"></div>
+        <div class="auth-side-content">
+            <div class="eyebrow text-warning">Perpustakaan Tunku Tun Aminah</div>
+            <h1 class="font-display text-white display-5 mb-3">Welcome back to your library.</h1>
+            <p class="text-white-50 mb-4">Sign in to book rooms, track approvals and get notified the moment your request is decided.</p>
+            <div class="demo-box" data-testid="demo-accounts-panel">
+                <div class="small fw-semibold text-white mb-2"><i class="bi bi-person-badge me-1"></i>Demo accounts — click to fill</div>
+                <button type="button" class="demo-btn" data-id="AI210045" data-pw="Student@123" data-testid="demo-login-student"><span class="role-tag role-student">Student</span> Nurul Izzah · <span class="mono">AI210045</span></button>
+                <button type="button" class="demo-btn" data-id="STF8842" data-pw="Lecturer@123" data-testid="demo-login-lecturer"><span class="role-tag role-lecturer">Lecturer</span> Dr. Farhan · <span class="mono">STF8842</span></button>
+                <button type="button" class="demo-btn" data-id="admin.ptta@uthm.edu.my" data-pw="Admin@123" data-testid="demo-login-admin"><span class="role-tag role-admin">Admin</span> Puan Zubaidah · PTTA</button>
+            </div>
+        </div>
+    </div>
+    <div class="auth-form-col">
+        <div class="auth-card reveal">
+            <h2 class="font-display mb-1">Sign in</h2>
+            <p class="text-secondary mb-4">Use your UTHM email, matric number or staff ID.</p>
+            <form asp-action="Login" method="post" data-testid="login-form">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small py-2" data-testid="login-error"></div>
+                <div class="mb-3">
+                    <label asp-for="Identifier" class="form-label small fw-semibold"></label>
+                    <div class="input-icon"><i class="bi bi-person"></i><input asp-for="Identifier" class="form-control form-control-lg" placeholder="e.g. AI240119" data-testid="login-identifier-input" /></div>
+                    <span asp-validation-for="Identifier" class="text-danger small"></span>
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Password" class="form-label small fw-semibold"></label>
+                    <div class="input-icon"><i class="bi bi-lock"></i><input asp-for="Password" class="form-control form-control-lg" placeholder="••••••••" data-testid="login-password-input" /></div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <button class="btn btn-navy btn-lg w-100 rounded-pill" data-testid="login-submit-button">Sign in <i class="bi bi-arrow-right ms-1"></i></button>
+            </form>
+            <p class="text-center small text-secondary mt-3 mb-0"><a asp-action="ForgotPassword" class="fw-semibold" data-testid="login-forgot-link">Forgot password?</a></p>
+            <p class="text-center small text-secondary mt-4 mb-0">New to Library Space? <a asp-action="Register" class="fw-semibold" data-testid="login-register-link">Create an account</a></p>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <script>
+        document.querySelectorAll('.demo-btn').forEach(b => b.addEventListener('click', () => {
+            document.querySelector('[data-testid=login-identifier-input]').value = b.dataset.id;
+            document.querySelector('[data-testid=login-password-input]').value = b.dataset.pw;
+        }));
+    </script>
+}

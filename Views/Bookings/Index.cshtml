@@ -1,0 +1,165 @@
+﻿@model MyBookingsVm
+@{
+    ViewData["Title"] = "My bookings";
+    var counts = ViewBag.Counts as Dictionary<string, int> ?? new();
+    var highlight = ViewBag.Highlight as string;
+    var tabs = new[] {
+        ("all", "All"),
+        ("upcoming", "Upcoming"),
+        ("pending", "Pending approval"),
+        ("past", "Completed"),
+        ("closed", "Cancelled / Rejected")
+    };
+}
+
+<section class="page-head">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow">Booking history</div>
+            <h1 class="page-title">My bookings</h1>
+        </div>
+        <a asp-controller="Facilities" asp-action="Index"
+           class="btn btn-gold rounded-pill px-4"
+           data-testid="my-bookings-new-button">
+            <i class="bi bi-plus-lg me-1"></i>New booking
+        </a>
+    </div>
+</section>
+
+<section class="container-xl pb-5">
+    <div class="filter-pills mb-4" data-testid="my-bookings-tabs">
+        @foreach (var (key, label) in tabs)
+        {
+            <a asp-action="Index" asp-route-tab="@key"
+               class="fpill @(Model.Tab == key ? "active" : "")"
+               data-testid="my-bookings-tab-@key">
+                @label <span>@counts.GetValueOrDefault(key)</span>
+            </a>
+        }
+    </div>
+
+    @if (!Model.Bookings.Any())
+    {
+        <div class="empty-state" data-testid="my-bookings-empty">
+            <span class="empty-icon"><i class="bi bi-calendar2-x"></i></span>
+            <h3>No bookings here</h3>
+            <a asp-controller="Facilities" asp-action="Index" class="btn btn-navy rounded-pill">Browse facilities</a>
+        </div>
+    }
+
+    <div class="d-grid gap-3">
+        @foreach (var b in Model.Bookings)
+        {
+            var rule = FacilityRules.For(b.Facility!.Type);
+            <div class="ticket @(b.Reference == highlight ? "ticket-new" : "")"
+                 data-testid="booking-card-@b.Reference">
+                <div class="ticket-main">
+                    <div class="date-tile big">
+                        <span>@b.Date.ToString("MMM")</span>
+                        <strong>@b.Date.Day</strong>
+                        <em>@b.Date.ToString("ddd")</em>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="type-chip static sm type-@Ui.TypeSlug(b.Facility.Type)">
+                                <i class="bi @rule.Icon"></i>@rule.Label
+                            </span>
+                            <partial name="_StatusBadge" model="b.Status" />
+                            @if (b.Reference == highlight)
+                            {
+                                <span class="pill pill-new">New</span>
+                            }
+                        </div>
+                        <h3 class="h6 fw-bold mb-1">@b.Facility.Name</h3>
+                        <div class="small text-secondary">
+                            <i class="bi bi-clock me-1"></i>
+                            <span class="mono">@(b.IsRental ? b.DateText + " · 1 month" : b.TimeText)</span>
+                            · <i class="bi bi-people ms-1 me-1"></i>@b.Attendees · @b.Purpose
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(b.AdminNote))
+                        {
+                            <div class="small mt-1 admin-note">
+                                <i class="bi bi-chat-left-quote me-1"></i>Admin: @b.AdminNote
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="ticket-stub">
+                    <div class="small text-secondary">Reference</div>
+                    <div class="mono fw-bold" data-testid="booking-reference">@b.Reference</div>
+
+                    @if (b.Fee > 0 || b.PaymentStatus != PaymentStatus.None)
+                    {
+                        <div class="small mt-1 @(b.PaymentStatus == PaymentStatus.Paid ? "text-success" : "text-warning-emphasis")"
+                             data-testid="booking-payment-status-@b.Reference">
+                            @(b.Fee > 0 ? $"RM{b.Fee:0.00} · " : "")@b.PaymentText
+                        </div>
+                    }
+
+                    @* ⏱ Countdown to the 24-hour payment deadline *@
+                    @if (b.AwaitingProof && b.PaymentDueAt is DateTime due)
+                    {
+                        var remaining = due - DateTime.UtcNow;
+                        if (remaining.TotalSeconds > 0)
+                        {
+                            <div class="small text-warning-emphasis mt-1" data-testid="booking-countdown-@b.Reference">
+                                <i class="bi bi-alarm me-1"></i>
+                                Pay within <strong class="mono" data-countdown-end="@due.ToString("o")">…</strong>
+                            </div>
+                        }
+                    }
+
+                    @* 🔑 Bilik Iqra' — countdown to key return deadline *@
+                    @if (b.Facility.Type == FacilityType.BilikIqra && b.Status == BookingStatus.Approved && b.Date <= Model.Today)
+                    {
+                        var keyDue = b.IsRental ? b.EndDate.ToDateTime(new TimeOnly(23, 59)) : b.Date.ToDateTime(b.EndTime);
+                        if (keyDue > DateTime.Now)
+                        {
+                            <div class="small text-danger mt-1" data-testid="booking-keycountdown-@b.Reference">
+                                <i class="bi bi-key me-1"></i>
+                                Return room key in <strong class="mono" data-countdown-end="@keyDue.ToString("o")">…</strong>
+                            </div>
+                        }
+                    }
+
+                    @if (b.AwaitingProof)
+                    {
+                        <a asp-action="Proof" asp-route-id="@b.Id"
+                           class="btn btn-sm btn-gold rounded-pill px-3 mt-2"
+                           data-testid="booking-upload-proof-button-@b.Reference">
+                            <i class="bi bi-upload me-1"></i>Upload proof
+                        </a>
+                    }
+                    else if (b.HasProof)
+                    {
+                        <a asp-action="ProofFile" asp-route-id="@b.Id" target="_blank"
+                           class="d-block small mt-1"
+                           data-testid="booking-view-proof-@b.Reference">
+                            <i class="bi bi-paperclip"></i> My proof
+                        </a>
+                    }
+
+                    @{
+                        var canCancel = b.IsActive && b.Date >= Model.Today
+                            && b.PaymentStatus is not (PaymentStatus.ProofSubmitted or PaymentStatus.Paid)
+                            && !(b.Facility?.Type == FacilityType.BilikIqra
+                                 && b.Status is BookingStatus.Confirmed or BookingStatus.Approved);
+                    }
+                    @if (canCancel)
+                    {
+                        <form asp-action="Cancel" asp-route-id="@b.Id" method="post"
+                              class="mt-2"
+                              onsubmit="return confirm('Cancel booking @b.Reference?');">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                    data-testid="booking-cancel-button-@b.Reference">
+                                Cancel
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>

@@ -1,0 +1,85 @@
+@model FacilityCardVm
+@{
+    var f = Model.Facility;
+    var rule = FacilityRules.For(f.Type);
+    var slug = Ui.TypeSlug(f.Type);
+    var showImg = FacilityRules.ShowsImage(f.Type) && !string.IsNullOrEmpty(f.ImageUrl);
+}
+<article class="facility-card h-100" data-testid="facility-card-@f.Code.ToLower()">
+    <a asp-controller="Facilities" asp-action="Details" asp-route-id="@f.Id"
+       class="facility-media" data-testid="facility-card-link-@f.Code.ToLower()">
+
+        @if (showImg)
+        {
+            <img src="@f.ImageUrl" alt="@f.Name" loading="lazy" />
+        }
+        else
+        {
+            <div class="facility-tile tile-@slug" data-testid="facility-tile-@f.Code.ToLower()" aria-hidden="true">
+                <i class="bi @rule.Icon"></i>
+                <span class="mono">@f.Code</span>
+            </div>
+        }
+
+        <span class="type-chip type-@slug"><i class="bi @rule.Icon"></i>@(string.IsNullOrEmpty(f.TypeName) ? rule.Label : f.TypeName)</span>
+
+        @if (f.Status == FacilityStatus.Maintenance)
+        {
+            <span class="live-chip chip-maint" data-testid="facility-status-@f.Code.ToLower()">
+                <i class="bi bi-tools"></i>Maintenance
+            </span>
+        }
+        else if (Model.InUseNow)
+        {
+            <span class="live-chip chip-busy" data-testid="facility-status-@f.Code.ToLower()">
+                <span class="dot"></span>In use now
+            </span>
+        }
+        else
+        {
+            <span class="live-chip chip-free" data-testid="facility-status-@f.Code.ToLower()">
+                <span class="dot pulse"></span>Available now
+            </span>
+        }
+    </a>
+
+    <div class="p-3 p-lg-4 d-flex flex-column flex-grow-1">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+            <h3 class="facility-name">@f.Name</h3>
+            <span class="mono code-tag">@f.Code</span>
+        </div>
+
+        <div class="small text-secondary mb-3">
+            <i class="bi bi-geo-alt me-1"></i>@f.Location
+        </div>
+        <div class="small text-secondary mb-3" data-testid="facility-type-@f.Code.ToLower()">
+            <i class="bi @rule.Icon me-1"></i>@(string.IsNullOrEmpty(f.TypeName) ? rule.Label : f.TypeName)
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="meta"><i class="bi bi-people"></i>Kapasiti: @f.CapacityRangeText Orang</span>
+            <span class="meta"><i class="bi bi-layers"></i>Jumlah Unit: @f.Units Unit / Karel</span>
+            <span class="meta @(rule.Fee > 0 ? "meta-gold" : "")">
+                <i class="bi bi-cash-coin"></i>@(rule.Fee > 0 ? $"RM{rule.Fee:0.00} / Sebulan" : "Percuma")
+            </span>
+            <span class="meta">
+                <i class="bi @(rule.RequiresApproval ? "bi-shield-check" : "bi-lightning-charge")"></i>
+                @(rule.RequiresApproval ? "Approval" : "Instant")
+            </span>
+        </div>
+
+        <div class="mt-auto d-flex justify-content-between align-items-center">
+            <span class="small text-secondary">
+                @Model.BookingsToday booking@(Model.BookingsToday == 1 ? "" : "s") today
+            </span>
+            <a asp-controller="Facilities" asp-action="Details" asp-route-id="@f.Id"
+               class="btn btn-sm @(Model.CanBook ? "btn-navy" : "btn-outline-secondary") rounded-pill px-3"
+               data-testid="facility-book-button-@f.Code.ToLower()">
+                @(Model.CanBook
+                    ? f.Type == FacilityType.BilikIqra ? "Pilih Unit Karel" : "Pilih Unit & Slot Masa"
+                    : "View")
+                <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</article>

@@ -1,0 +1,33 @@
+﻿<div class="chat-widget" id="chatWidget" data-testid="chatbot-widget">
+    <div class="chat-panel shadow-lg" id="chatPanel" aria-hidden="true" data-testid="chatbot-panel">
+        <div class="chat-head">
+            <div class="d-flex align-items-center gap-2">
+                <span class="chat-orb"><i class="bi bi-stars"></i></span>
+                <div class="lh-sm">
+                    <div class="fw-bold">PTTA Assist</div>
+                    <div class="small opacity-75"><span class="live-dot"></span> Powered by Google Gemini · 24/7</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-icon text-white" id="chatClose" aria-label="Close chat" data-testid="chatbot-close-button"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="chat-body" id="chatBody" data-testid="chatbot-messages">
+            <div class="msg bot">Hi! 👋 I'm <strong>PTTA Assist</strong>. I can answer anything about the library <em>and</em> how to use this system — changing your password, updating your profile picture, booking rooms, proof of payment, returning keys, feedback and the Admin Console.</div>
+        </div>
+        <div class="chat-suggest" id="chatSuggest">
+            <button type="button" data-q="How do I change my password?" data-testid="chatbot-suggestion-password">Change password</button>
+            <button type="button" data-q="How do I update my profile picture?" data-testid="chatbot-suggestion-photo">Profile picture</button>
+            <button type="button" data-q="How do I book a facility?" data-testid="chatbot-suggestion-booking">How to book</button>
+            <button type="button" data-q="How do I return the Bilik Iqra' room key?" data-testid="chatbot-suggestion-key">Return key</button>
+            <button type="button" data-q="What can an admin do in the Admin Console?" data-testid="chatbot-suggestion-admin">Admin console</button>
+            <button type="button" data-q="What are the library opening hours?" data-testid="chatbot-suggestion-hours">Opening hours</button>
+        </div>
+        <form class="chat-input" id="chatForm" autocomplete="off">
+            <input type="text" id="chatText" maxlength="500" placeholder="Ask anything about PTTA…" data-testid="chatbot-input" />
+            <button type="submit" class="btn btn-gold btn-icon" aria-label="Send" data-testid="chatbot-send-button"><i class="bi bi-send-fill"></i></button>
+        </form>
+    </div>
+    <button class="chat-fab" id="chatToggle" aria-label="Open library assistant" data-testid="chatbot-open-button">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span class="chat-fab-label">Ask PTTA</span>
+    </button>
+</div>

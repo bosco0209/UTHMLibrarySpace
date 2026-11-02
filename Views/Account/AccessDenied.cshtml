@@ -1,0 +1,9 @@
+﻿@{
+    ViewData["Title"] = "Access denied";
+}
+<section class="container-xl py-5 text-center" data-testid="access-denied-page">
+    <span class="empty-icon mx-auto mb-3"><i class="bi bi-shield-lock"></i></span>
+    <h1 class="font-display">Access restricted</h1>
+    <p class="text-secondary">Your role doesn't have permission to view this page.</p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-navy rounded-pill px-4">Back to home</a>
+</section>

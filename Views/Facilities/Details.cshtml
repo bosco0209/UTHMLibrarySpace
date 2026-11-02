@@ -1,0 +1,412 @@
+@using System.Security.Claims
+@model FacilityDetailsVm
+@{
+    var f = Model.Facility;
+    var rule = FacilityRules.For(f.Type);
+    ViewData["Title"] = f.Name;
+    var role = User.FindFirstValue(ClaimTypes.Role);
+    var draft = TempData["BookingDraft"] as string;
+    var startMin = FacilityRules.Open.Hour * 60;
+    var span = (FacilityRules.Close.Hour - FacilityRules.Open.Hour) * 60.0;
+
+    var heroImg = FacilityRules.ShowsImage(f.Type) && !string.IsNullOrEmpty(f.ImageUrl);
+}
+
+<section class="detail-hero @(heroImg ? "" : "detail-hero-plain tile-" + Ui.TypeSlug(f.Type))"
+         style="@(heroImg ? $"background-image:url('{f.ImageUrl}')" : "")">
+    @if (!heroImg)
+    {
+        <i class="bi @rule.Icon detail-hero-icon"></i>
+    }
+    <div class="detail-scrim"></div>
+    <div class="container-xl position-relative">
+        <a asp-action="Index" asp-route-type="@f.Type" class="back-link" data-testid="facility-back-link">
+            <i class="bi bi-arrow-left"></i> All @rule.Plural
+        </a>
+        <div class="d-flex flex-wrap gap-2 mb-3 mt-4">
+            <span class="type-chip static type-@Ui.TypeSlug(f.Type)">
+                <i class="bi @rule.Icon"></i>@(string.IsNullOrEmpty(f.TypeName) ? rule.Label : f.TypeName)
+            </span>
+            <span class="glass-pill mono">@f.Code</span>
+            @if (f.Status == FacilityStatus.Maintenance)
+            {
+                <span class="glass-pill"><i class="bi bi-tools me-1"></i>Under maintenance</span>
+            }
+        </div>
+        <h1 class="detail-title" data-testid="facility-detail-name">@f.Name</h1>
+        <p class="text-white-50 mb-0"><i class="bi bi-geo-alt me-1"></i>@f.Location</p>
+    </div>
+</section>
+
+<section class="container-xl detail-body">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="panel mb-4">
+                <div class="row g-3 text-center mb-4">
+                    <div class="col-3">
+                        <div class="kv"><span class="mono">@f.CapacityRangeText</span><small>Capacity</small></div>
+                    </div>
+                    <div class="col-3">
+                        <div class="kv"><span class="mono">@f.Units</span><small>Units</small></div>
+                    </div>
+                    <div class="col-3">
+                        <div class="kv">
+                            <span class="mono">@(rule.Fee > 0 ? $"RM{rule.Fee:0}" : "Free")</span>
+                            <small>@(Model.IsRental ? "Per month" : "Per session")</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="kv">
+                            <span>@(rule.RequiresApproval ? "Approval" : "Instant")</span>
+                            <small>Confirmation</small>
+                        </div>
+                    </div>
+                </div>
+                <p class="mb-3">@f.Description</p>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var a in f.AmenityList)
+                    {
+                        <span class="meta"><i class="bi bi-check2"></i>@a</span>
+                    }
+                </div>
+                <div class="rule-strip mt-4 mb-0">
+                    <i class="bi bi-person-check"></i>
+                    <div>
+                        Bookable by <strong>@FacilityRules.RolesText(f.Type)</strong>@(Model.IsRental
+                            ? $" · one option only: rent one carrel for one month for RM{rule.Fee:0} per month. Choose a start date, upload your proof of payment, then wait for admin approval"
+                            : role == Roles.Lecturer
+                                ? " · lecturers upload proof of payment after booking, then wait for admin approval"
+                                : "")
+                    </div>
+                </div>
+            </div>
+
+            @* ============================================================
+               RENTAL: monthly calendar + period list
+               ============================================================ *@
+            @if (Model.IsRental)
+            {
+                var mStart = Model.Month;
+                var mEnd = mStart.AddMonths(1).AddDays(-1);
+                var lead = ((int)mStart.DayOfWeek + 6) % 7;
+                var thisMonth = new DateOnly(Model.Today.Year, Model.Today.Month, 1);
+                var monthRentals = Model.Rentals.Where(r => r.Date <= mEnd && r.EndDate >= mStart).ToList();
+
+                <div class="panel" data-testid="rental-calendar">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <div class="eyebrow mb-1">Monthly availability</div>
+                            <h3 class="h5 mb-0" data-testid="rental-month-title">@mStart.ToString("MMMM yyyy")</h3>
+                        </div>
+                        <div class="d-flex gap-2">
+                            @if (mStart > thisMonth)
+                            {
+                                <a asp-route-id="@f.Id"
+                                   asp-route-month="@mStart.AddMonths(-1).ToString("yyyy-MM")"
+                                   class="btn btn-sm btn-light rounded-pill"
+                                   data-testid="rental-month-prev">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            }
+                            @if (mStart < thisMonth.AddMonths(3))
+                            {
+                                <a asp-route-id="@f.Id"
+                                   asp-route-month="@mStart.AddMonths(1).ToString("yyyy-MM")"
+                                   class="btn btn-sm btn-light rounded-pill"
+                                   data-testid="rental-month-next">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mcal" data-testid="rental-month-grid">
+                        @foreach (var dn in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+                        {
+                            <div class="mcal-head">@dn</div>
+                        }
+                        @for (var i = 0; i < lead; i++)
+                        {
+                            <div></div>
+                        }
+                        @for (var d = mStart; d <= mEnd; d = d.AddDays(1))
+                        {
+                            var day = d;
+                            var hit = monthRentals.FirstOrDefault(r => r.Date <= day && r.EndDate >= day);
+                            var cls = day < Model.Today ? "past" : hit is null ? "free" : hit.Status == BookingStatus.Pending ? "pending" : "booked";
+                            <div class="mcal-day @cls"
+                                 title="@(hit is null ? "Free" : $"{hit.DateText} ({hit.Status})")"
+                                 data-testid="rental-day-@day.ToString("yyyy-MM-dd")">@day.Day</div>
+                        }
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-3 small text-secondary mt-3">
+                        <span><i class="lg lg-free"></i>Free</span>
+                        <span><i class="lg lg-booked"></i>Rented</span>
+                        <span><i class="lg lg-pending"></i>On hold (awaiting approval)</span>
+                    </div>
+
+                    <div class="mt-3" data-testid="rental-period-list">
+                        @if (!monthRentals.Any())
+                        {
+                            <div class="small text-success" data-testid="rental-free-message">
+                                <i class="bi bi-check-circle me-1"></i>This room is free for the whole of @mStart.ToString("MMMM").
+                            </div>
+                        }
+                        @foreach (var b in monthRentals)
+                        {
+                            <div class="rental-row" data-testid="rental-period-row">
+                                <span class="rental-bar"></span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small mono">
+                                        @b.Date.ToString("dd MMM yyyy") → @b.EndDate.ToString("dd MMM yyyy")
+                                    </div>
+                                    <div class="small text-secondary">1 month</div>
+                                </div>
+                                <partial name="_StatusBadge" model="b.Status" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* ========================================================
+                   HOURLY: original timeline
+                   ======================================================== *@
+                <div class="panel" data-testid="availability-timeline">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <div class="eyebrow mb-1">Availability</div>
+                            <h3 class="h5 mb-0">@Model.Date.ToString("dddd, d MMMM yyyy")</h3>
+                        </div>
+                        <form method="get" class="d-flex gap-2" data-testid="availability-date-form">
+                            <input type="date" name="date"
+                                   value="@Model.Date.ToString("yyyy-MM-dd")"
+                                   min="@Model.Today.ToString("yyyy-MM-dd")"
+                                   class="form-control form-control-sm"
+                                   onchange="this.form.submit()"
+                                   data-testid="availability-date-input" />
+                        </form>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-track" id="timelineTrack"
+                             data-open="@FacilityRules.Open.ToString("HH:mm")"
+                             data-close="@FacilityRules.Close.ToString("HH:mm")">
+                            @foreach (var b in Model.DayBookings)
+                            {
+                                var left = ((b.StartTime.Hour * 60 + b.StartTime.Minute) - startMin) / span * 100;
+                                var width = ((b.EndTime - b.StartTime).TotalMinutes) / span * 100;
+                                <div class="tl-block @(b.Status == BookingStatus.Pending ? "tl-pending" : "tl-booked")"
+                                     style="left:@left.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%;width:@width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"
+                                     title="@b.StartTime.ToString("HH:mm")–@b.EndTime.ToString("HH:mm") (@b.Status)"></div>
+                            }
+                            <div class="tl-select" id="tlSelect"></div>
+                        </div>
+                        <div class="timeline-scale">
+                            @for (var h = FacilityRules.Open.Hour; h <= FacilityRules.Close.Hour; h += 2)
+                            {
+                                <span class="mono">@h.ToString("00")</span>
+                            }
+                        </div>
+                        <div class="d-flex gap-3 small text-secondary mt-2">
+                            <span><i class="lg lg-free"></i>Free</span>
+                            <span><i class="lg lg-booked"></i>Booked</span>
+                            <span><i class="lg lg-pending"></i>Pending</span>
+                            <span><i class="lg lg-sel"></i>Your selection</span>
+                        </div>
+                    </div>
+                    <div class="mt-3" data-testid="day-booking-list">
+                        @if (!Model.DayBookings.Any())
+                        {
+                            <div class="small text-success">
+                                <i class="bi bi-check-circle me-1"></i>Fully available on this day.
+                            </div>
+                        }
+                        @foreach (var b in Model.DayBookings)
+                        {
+                            <div class="slot-row">
+                                <span class="mono">@b.StartTime.ToString("HH:mm") – @b.EndTime.ToString("HH:mm")</span>
+                                <partial name="_StatusBadge" model="b.Status" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-5">
+            <div class="panel booking-panel sticky-lg-top" style="top:96px" data-testid="booking-panel">
+                <h3 class="font-display h4 mb-1">Reserve this space</h3>
+                <p class="small text-secondary mb-4">
+                    @(Model.IsRental
+                        ? $"One simple plan: just pick a start date. One carrel is yours for one month for RM{rule.Fee:0} per month."
+                        : "Choose any start and end time between 08:00 and 22:00.")
+                </p>
+
+                @if (!Model.IsAuthenticated)
+                {
+                    <div class="text-center py-3">
+                        <span class="empty-icon mx-auto mb-3"><i class="bi bi-person-lock"></i></span>
+                        <p class="mb-3">Sign in with your matric number or staff ID to book.</p>
+                        <a asp-controller="Account" asp-action="Login"
+                           asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)"
+                           class="btn btn-navy rounded-pill px-4"
+                           data-testid="booking-login-button">Sign in to book</a>
+                    </div>
+                }
+                else if (!Model.CanBook)
+                {
+                    <div class="alert alert-warning rounded-4 d-flex gap-2 mb-0" data-testid="booking-blocked-message">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <div>@Model.BlockReason</div>
+                    </div>
+                }
+                else
+                {
+                    <form asp-action="Book" method="post" id="bookingForm" data-testid="booking-form">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small py-2" data-testid="booking-error"></div>
+                        <input type="hidden" name="FacilityId" value="@f.Id" />
+
+                        @if (Model.IsRental)
+                        {
+                            @* ---- Rental form: start date only ---- *@
+                            <div class="plan-box mb-3" data-testid="rental-plan-box">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="eyebrow mb-1">Monthly plan</div>
+                                        <div class="fw-bold">1-month carrel rental</div>
+                                    </div>
+                                    <div class="plan-price mono">RM@(rule.Fee.ToString("0"))</div>
+                                </div>
+                                <ul class="plan-list">
+                                    <li>
+                                        <i class="bi bi-calendar-range"></i>
+                                        Rental period <strong class="mono" id="rentalPeriod" data-testid="rental-period-text"></strong>
+                                    </li>
+                                    <li><i class="bi bi-upload"></i>Upload proof of payment after booking</li>
+                                    <li><i class="bi bi-lock"></i>Room is held for you while the admin reviews it</li>
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Rental start date</label>
+                                <input type="date" name="Date"
+                                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                                       min="@Model.Today.ToString("yyyy-MM-dd")"
+                                       class="form-control" required
+                                       data-testid="booking-date-input" />
+                            </div>
+
+                            @* Hidden times required by the server model binder *@
+                            <input type="hidden" name="StartTime" value="@FacilityRules.Open.ToString("HH:mm")" />
+                            <input type="hidden" name="EndTime" value="@FacilityRules.Close.ToString("HH:mm")" />
+
+                            <div class="fee-box mb-3" data-testid="booking-fee-summary">
+                                <div class="d-flex justify-content-between">
+                                    <span>Duration</span>
+                                    <span class="mono">@(Model.IsRental ? "1 month" : "2h 00m")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Rental fee</span>
+                                    <span class="mono fw-bold" data-testid="booking-fee-amount">@(rule.Fee > 0 ? $"RM {rule.Fee:0.00}" : "RM 0.00 · Free")</span>
+                                </div>
+                                @if (role is not null && FacilityRules.NeedsProof(f.Type, role))
+                                {
+                                    <div class="fee-note" data-testid="booking-proof-note">
+                                        <i class="bi bi-upload me-1"></i>After you press Book you'll upload your proof of payment (JPG, PNG or PDF).
+                                    </div>
+                                }
+                                <div class="fee-note">
+                                    <i class="bi @(rule.RequiresApproval ? "bi-hourglass-split" : "bi-lightning-charge-fill") me-1"></i>
+                                    @(rule.RequiresApproval ? "Your request will be reviewed by a PTTA administrator." : "Confirmed instantly after submission.")
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            @* ---- Hourly form ---- *@
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Date</label>
+                                <input type="date" name="Date"
+                                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                                       min="@Model.Today.ToString("yyyy-MM-dd")"
+                                       max="@Model.Today.AddDays(60).ToString("yyyy-MM-dd")"
+                                       class="form-control" required
+                                       data-testid="booking-date-input" />
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Start time</label>
+                                    <input type="time" name="StartTime" id="startTime" value="10:00"
+                                           min="08:00" max="21:45" step="900"
+                                           class="form-control mono" required
+                                           data-testid="booking-start-time-input" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">End time</label>
+                                    <input type="time" name="EndTime" id="endTime" value="12:00"
+                                           min="08:15" max="22:00" step="900"
+                                           class="form-control mono" required
+                                           data-testid="booking-end-time-input" />
+                                </div>
+                            </div>
+                            <div class="fee-box mb-3" data-testid="booking-fee-summary">
+                                <div class="d-flex justify-content-between">
+                                    <span>Duration</span>
+                                    <span class="mono" id="durationText">2h 00m</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Session fee</span>
+                                    <span class="mono fw-bold" data-testid="booking-fee-amount">@(rule.Fee > 0 ? $"RM {rule.Fee:0.00}" : "RM 0.00 · Free")</span>
+                                </div>
+                                @if (rule.Fee > 0)
+                                {
+                                    <div class="fee-note"><i class="bi bi-shop me-1"></i>Pay at the PTTA counter (Level 1) before your session.</div>
+                                }
+                                <div class="fee-note">
+                                    <i class="bi @(rule.RequiresApproval ? "bi-hourglass-split" : "bi-lightning-charge-fill") me-1"></i>
+                                    @(rule.RequiresApproval ? "Your request will be reviewed by a PTTA administrator." : "Confirmed instantly after submission.")
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">
+                                Number of attendees <span class="text-secondary fw-normal">(max @f.Capacity)</span>
+                            </label>
+                            <input type="number" name="Attendees" id="attendees" value="1" min="1" max="@f.Capacity"
+                                   class="form-control" required
+                                   data-testid="booking-attendees-input" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Purpose</label>
+                            <textarea name="Purpose" id="purpose" rows="2" class="form-control"
+                                      placeholder="e.g. PSM group discussion" required minlength="3"
+                                      data-testid="booking-purpose-input"></textarea>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="agree" required data-testid="booking-terms-checkbox" />
+                            <label class="form-check-label small" for="agree">
+                                I agree to the PTTA facility rules (no food, keep noise low, vacate on time).
+                            </label>
+                        </div>
+                        <button class="btn btn-gold btn-lg w-100 rounded-pill" data-testid="booking-submit-button">
+                            @(Model.IsRental
+                                ? $"Book for 1 month · RM{rule.Fee:0}"
+                                : role is not null && FacilityRules.NeedsProof(f.Type, role)
+                                    ? "Book & upload proof"
+                                    : rule.RequiresApproval ? "Submit for approval" : "Confirm booking")
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>window.bookingDraft = @Html.Raw(string.IsNullOrEmpty(draft) ? "null" : draft);</script>
+}

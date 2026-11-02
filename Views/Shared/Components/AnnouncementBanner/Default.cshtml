@@ -1,0 +1,17 @@
+﻿@model List<Announcement>
+@if (Model.Any())
+{
+    <div class="announce-bar" data-testid="announcement-banner">
+        <div class="container-xl d-flex align-items-center gap-3">
+            <span class="announce-label"><i class="bi bi-broadcast"></i> Live</span>
+            <div class="announce-track">
+                <div class="announce-scroll">
+                    @foreach (var a in Model.Concat(Model))
+                    {
+                        <span class="announce-item kind-@a.Kind.ToString().ToLower()"><i class="bi @Ui.AnnouncementIcon(a.Kind)"></i><strong>@a.Title</strong> — @a.Message</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

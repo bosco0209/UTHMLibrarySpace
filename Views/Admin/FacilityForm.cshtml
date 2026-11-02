@@ -1,0 +1,143 @@
+@model FacilityFormVm
+@{
+    ViewData["Title"] = Model.Id is null ? "Add facility" : "Edit facility";
+}
+<section class="page-head admin-head">
+    <div class="container-xl">
+        <div class="eyebrow text-warning">PTTA command center</div>
+        <h1 class="page-title text-white">@ViewData["Title"]</h1>
+    </div>
+</section>
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <form asp-action="FacilityForm" method="post" enctype="multipart/form-data"
+          class="panel" style="max-width:860px" data-testid="facility-form">
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small"></div>
+
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label asp-for="Name" class="form-label small fw-semibold"></label>
+                <input asp-for="Name" class="form-control" data-testid="facility-form-name-input" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Code" class="form-label small fw-semibold"></label>
+                <input asp-for="Code" class="form-control mono text-uppercase" placeholder="SR-05"
+                       data-testid="facility-form-code-input" />
+                <span asp-validation-for="Code" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Type" class="form-label small fw-semibold"></label>
+                <select asp-for="Type" class="form-select" data-testid="facility-form-type-select">
+                    @foreach (var kv in FacilityRules.All)
+                    {
+                        <option value="@kv.Key">@kv.Value.Label — @FacilityRules.FeeText(kv.Key), @FacilityRules.RolesText(kv.Key)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Capacity" class="form-label small fw-semibold"></label>
+                <input asp-for="Capacity" type="number" min="1" max="1000" class="form-control"
+                       data-testid="facility-form-capacity-input" />
+                <div class="form-text small text-secondary">Maximum pax.</div>
+                <span asp-validation-for="Capacity" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="CapacityMin" class="form-label small fw-semibold"></label>
+                <input asp-for="CapacityMin" type="number" min="1" max="1000" class="form-control"
+                       placeholder="e.g. 30" data-testid="facility-form-capacity-min-input" />
+                <div class="form-text small text-secondary">Optional. Shown as "30 - 40 Orang".</div>
+                <span asp-validation-for="CapacityMin" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Units" class="form-label small fw-semibold"></label>
+                <input asp-for="Units" type="number" min="1" max="1000" class="form-control"
+                       data-testid="facility-form-units-input" />
+                <div class="form-text small text-secondary">e.g. 118 carrels.</div>
+                <span asp-validation-for="Units" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Status" class="form-label small fw-semibold"></label>
+                <select asp-for="Status" asp-items="Html.GetEnumSelectList<FacilityStatus>()"
+                        class="form-select" data-testid="facility-form-status-select"></select>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Location" class="form-label small fw-semibold"></label>
+                <input asp-for="Location" class="form-control" placeholder="Level 2, East Wing"
+                       data-testid="facility-form-location-input" />
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Amenities" class="form-label small fw-semibold"></label>
+                <input asp-for="Amenities" class="form-control" placeholder="Whiteboard, Smart TV, WiFi"
+                       data-testid="facility-form-amenities-input" />
+                <div class="form-text small text-secondary">Comma-separated.</div>
+            </div>
+
+            @* =========================================================
+               Image field — visible only for types where ShowsImage is true.
+               Study & Meeting rooms use icon tiles (no photo).
+               ========================================================= *@
+            @if (FacilityRules.ShowsImage(Model.Type))
+            {
+                <div class="col-12" id="imageField">
+                    <label asp-for="ImageFile" class="form-label small fw-semibold">Facility photo</label>
+                    <input type="file" asp-for="ImageFile"
+                           accept="image/jpeg,image/png,image/webp"
+                           class="form-control"
+                           data-testid="facility-form-image-input" />
+                    <div class="form-text small text-secondary">
+                        Optional. JPG / PNG / WEBP, up to 3 MB. If empty, an icon tile is shown instead.
+                    </div>
+                    <span asp-validation-for="ImageFile" class="text-danger small"></span>
+
+                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    {
+                        <div class="mt-2">
+                            <img src="@Model.ImageUrl" alt="Current photo"
+                                 style="max-width:180px;border-radius:10px;border:1px solid #E2E8F0" />
+                            <div class="small text-secondary mt-1">Current photo</div>
+                        </div>
+                    }
+
+                    @* Preserve existing ImageUrl on submit *@
+                    <input type="hidden" asp-for="ImageUrl" />
+                </div>
+            }
+            else
+            {
+                <div class="col-12 small text-secondary" id="noImageNote">
+                    <i class="bi bi-info-circle me-1"></i>
+                    @FacilityRules.For(Model.Type).Plural are shown as a clean icon tile — no photo needed.
+                </div>
+            }
+
+            <div class="col-12">
+                <label asp-for="Description" class="form-label small fw-semibold"></label>
+                <textarea asp-for="Description" rows="3" class="form-control"
+                          placeholder="Short description of what this room offers…"
+                          data-testid="facility-form-description-input"></textarea>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-navy rounded-pill px-4" data-testid="facility-form-save-button">
+                Save facility
+            </button>
+            <a asp-action="Facilities" asp-route-type="@Model.Type"
+               class="btn btn-light rounded-pill px-4">Cancel</a>
+        </div>
+    </form>
+</section>
+
+
+}

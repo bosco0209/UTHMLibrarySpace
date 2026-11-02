@@ -1,0 +1,72 @@
+@model List<Booking>
+@{
+    ViewData["Title"] = "Key returns";
+}
+<section class="page-head admin-head">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow text-warning">PTTA command center</div>
+            <h1 class="page-title text-white">Bilik Iqra' key returns</h1>
+            <p class="text-white-50 mb-0">Students whose Bilik Iqra' rental has ended and need to return their room key.</p>
+        </div>
+        <a asp-action="ExportKeyReturnsPdf" class="btn btn-gold rounded-pill px-4" data-testid="admin-keyreturns-export-pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+        </a>
+    </div>
+</section>
+
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <div class="panel p-0 overflow-hidden">
+        @if (!Model.Any())
+        {
+            <div class="p-5 text-center text-secondary">
+                <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
+                No ended Bilik Iqra' rentals pending key collection.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table app-table align-middle mb-0" data-testid="admin-keyreturns-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone number</th>
+                            <th>Faculty</th>
+                            <th>Reference</th>
+                            <th>Rental period</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@b.User!.Name</td>
+                                <td>@b.User.Email</td>
+                                <td>@(string.IsNullOrEmpty(b.User.Phone) ? "—" : b.User.Phone)</td>
+                                <td>@b.User.Faculty</td>
+                                <td class="mono">@b.Reference</td>
+                                <td class="mono">@b.Date.ToString("dd MMM yyyy") – @b.EndDate.ToString("dd MMM yyyy")</td>
+                                <td><partial name="_StatusBadge" model="b.Status" /></td>
+                                <td>
+                                    <form asp-action="CollectKey" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@b.Id" />
+                                        <button class="btn btn-sm btn-navy rounded-pill px-3" data-testid="collect-key-@b.Reference">
+                                            <i class="bi bi-key me-1"></i>Collect
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</section>

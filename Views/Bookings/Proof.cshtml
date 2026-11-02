@@ -1,0 +1,123 @@
+@model Booking
+@{
+    ViewData["Title"] = "Proof of payment";
+    var b = Model;
+    var rule = FacilityRules.For(b.Facility!.Type);
+    var canUpload = b.Status == BookingStatus.Pending && b.PaymentStatus is PaymentStatus.AwaitingProof or PaymentStatus.ProofSubmitted;
+    var hasCountdown = b.PaymentDueAt is DateTime && b.PaymentStatus == PaymentStatus.AwaitingProof && b.Status == BookingStatus.Pending;
+}
+<section class="page-head">
+    <div class="container-xl">
+        <a asp-action="Index" class="back-link text-secondary" data-testid="proof-back-link"><i class="bi bi-arrow-left"></i> My bookings</a>
+        <div class="eyebrow mt-3">Step 2 of 2 · Payment</div>
+        <h1 class="page-title">Submit proof of payment</h1>
+    </div>
+</section>
+<section class="container-xl pb-5">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="panel" data-testid="proof-booking-summary">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="type-chip static sm type-@Ui.TypeSlug(b.Facility.Type)"><i class="bi @rule.Icon"></i>@rule.Label</span>
+                    <partial name="_StatusBadge" model="b.Status" />
+                </div>
+                <h3 class="h5 fw-bold mb-1" data-testid="proof-facility-name">@b.Facility.Name</h3>
+                <div class="mono small text-secondary mb-3" data-testid="proof-reference">@b.Reference</div>
+                <div class="fee-box">
+                    <div class="d-flex justify-content-between"><span>@(b.IsRental ? "Rental period" : "Date & time")</span><span class="mono" data-testid="proof-period">@(b.IsRental ? b.DateText : b.DateText + " · " + b.TimeText)</span></div>
+                    @if (b.IsRental)
+                    {
+                        <div class="d-flex justify-content-between"><span>Duration</span><span class="mono">1 month</span></div>
+                    }
+                    <div class="d-flex justify-content-between"><span>Amount</span><span class="mono fw-bold" data-testid="proof-amount">@(b.Fee > 0 ? $"RM {b.Fee:0.00}" + (b.IsRental ? " per month" : "") : "As advised by PTTA")</span></div>
+                    <div class="d-flex justify-content-between"><span>Payment</span><span class="fw-semibold" data-testid="proof-payment-status">@b.PaymentText</span></div>
+                </div>
+                <div class="steps-mini mt-4">
+                    <div class="sm-step done"><i class="bi bi-check-circle-fill"></i>Room held for you</div>
+                    <div class="sm-step @(b.HasProof ? "done" : "now")"><i class="bi @(b.HasProof ? "bi-check-circle-fill" : "bi-upload")"></i>Upload proof of payment</div>
+                    <div class="sm-step @(b.Status == BookingStatus.Approved ? "done" : "")"><i class="bi bi-patch-check"></i>Admin approval</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="panel" data-testid="proof-upload-panel">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small py-2" data-testid="proof-error"></div>
+
+                @* ⏱ Live countdown to the 24-hour deadline *@
+                @if (hasCountdown)
+                {
+                    <div class="alert alert-warning rounded-4 small d-flex gap-2 align-items-center" data-testid="proof-countdown">
+                        <i class="bi bi-alarm-fill"></i>
+                        <div>
+                            Upload your proof within
+                            <strong class="mono" data-countdown-end="@b.PaymentDueAt!.Value.ToString("o")">…</strong>
+                            or this room will be released automatically.
+                        </div>
+                    </div>
+                }
+
+                @if (!canUpload)
+                {
+                    <div class="alert alert-info rounded-4 mb-0" data-testid="proof-closed-message">This booking is @b.Status.ToString().ToLower(). Proof uploads are closed.</div>
+                }
+                else
+                {
+                    @* ============ Payment guide callout (PDF + inline steps) ============ *@
+                    <div class="panel mb-3" style="background: linear-gradient(135deg, #FFFBEB, #FEF3C7); border: 1px solid #FDE68A;" data-testid="proof-payment-guide">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-file-earmark-pdf-fill" style="font-size: 2rem; color: #B45309;"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold mb-1" style="color: #78350F;">How to pay — RM 20.00</div>
+                                <ol class="small mb-2" style="color: #92400E;">
+                                    <li>Open the UTHM ePayment portal → choose <strong>Misc. Payment</strong>.</li>
+                                    <li>Payment Category: <strong>PEMBAYARAN PERKHIDMATAN PERPUSTAKAAN</strong></li>
+                                    <li>Payment Type: <strong>SEWAAN BILIK IQRA</strong></li>
+                                    <li>Description: <strong>Bilik Iqra' (Study Room)</strong> · Amount: <strong>RM 20.00</strong></li>
+                                </ol>
+                                <div class="d-flex align-items-center gap-3 flex-wrap">
+                                    <a href="~/docs/UTHM_Room_Iqra_Payment_Guide.pdf"
+                                       target="_blank"
+                                       rel="noopener"
+                                       class="btn btn-gold rounded-pill px-3"
+                                       data-testid="proof-payment-guide-link">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i>Open PDF guide <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                    <img src="~/img/room-iqra-payment-qr.svg" alt="Bilik Iqra' payment QR code" width="96" height="96" style="background:#fff; padding:6px; border-radius:8px; border:1px solid #FDE68A;" data-testid="proof-payment-qr" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @* ==================================================================== *@
+
+                    <div class="rule-strip mb-4"><i class="bi bi-wallet2"></i><div>@FacilityRules.PaymentInstructions</div></div>
+
+                    @if (b.HasProof)
+                    {
+                        <div class="alert alert-success rounded-4 small d-flex gap-2 align-items-center" data-testid="proof-uploaded-message">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <div>Uploaded <strong>@b.ProofOriginalName</strong> on @b.ProofUploadedAt?.ToLocalTime().ToString("dd MMM yyyy, HH:mm"). Waiting for admin approval. <a asp-action="ProofFile" asp-route-id="@b.Id" target="_blank" data-testid="proof-view-link">View</a></div>
+                        </div>
+                    }
+
+                    <form asp-action="Proof" asp-route-id="@b.Id" method="post" enctype="multipart/form-data" data-testid="proof-upload-form">
+                        <label class="dropzone" for="proofInput" data-testid="proof-dropzone">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <strong id="proofName">@(b.HasProof ? "Choose a new file to replace it" : "Choose your receipt")</strong>
+                            <span class="small text-secondary">JPG, PNG or PDF · max 5 MB</span>
+                            <input type="file" name="proof" id="proofInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" required class="visually-hidden" data-testid="proof-file-input" />
+                        </label>
+                        <button class="btn btn-gold btn-lg w-100 rounded-pill mt-3" data-testid="proof-submit-button"><i class="bi bi-send me-1"></i>@(b.HasProof ? "Replace proof" : "Submit for approval")</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <script>
+        document.getElementById('proofInput')?.addEventListener('change', e => {
+            const f = e.target.files[0]; if (!f) return;
+            document.getElementById('proofName').textContent = f.name + (f.size > 5 * 1024 * 1024 ? ' (too large, max 5 MB)' : '');
+        });
+    </script>
+}

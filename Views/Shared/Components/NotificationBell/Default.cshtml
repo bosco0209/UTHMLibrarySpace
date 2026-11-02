@@ -1,0 +1,41 @@
+﻿@model List<Notification>
+@{
+    var unread = (int)ViewBag.Unread;
+}
+<div class="dropdown">
+    <button class="btn btn-icon bell-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="Notifications" data-testid="notification-bell-button">
+        <i class="bi bi-bell"></i>
+        @if (unread > 0)
+        {
+            <span class="bell-count" data-testid="notification-unread-count">@unread</span>
+        }
+    </button>
+    <div class="dropdown-menu dropdown-menu-end notif-menu shadow-lg border-0 rounded-4 p-0" data-testid="notification-dropdown">
+        <div class="d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+            <span class="fw-bold">Notifications</span>
+            @if (unread > 0)
+            {
+                <form asp-controller="Notifications" asp-action="MarkAllRead" method="post">
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    <button class="btn btn-link btn-sm p-0 text-decoration-none" data-testid="notification-mark-read-button">Mark all read</button>
+                </form>
+            }
+        </div>
+        <div class="notif-list">
+            @if (!Model.Any())
+            {
+                <div class="p-4 text-center small text-secondary">You're all caught up ✨</div>
+            }
+            @foreach (var n in Model)
+            {
+                <div class="notif-item @(n.IsRead ? "" : "unread")" data-testid="notification-item">
+                    <div class="d-flex justify-content-between gap-2">
+                        <span class="fw-semibold small">@n.Title</span>
+                        <span class="text-secondary" style="font-size:.7rem">@Ui.Ago(n.CreatedAt)</span>
+                    </div>
+                    <div class="small text-secondary">@n.Message</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,99 @@
+﻿@model AdminFeedbackVm
+@{
+    ViewData["Title"] = "Feedback";
+}
+<section class="page-head admin-head">
+    <div class="container-xl">
+        <div class="eyebrow text-warning">PTTA command center</div>
+        <h1 class="page-title text-white">User feedback &amp; facility reports</h1>
+    </div>
+</section>
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <div class="d-flex flex-wrap gap-2 mb-4" data-testid="feedback-filters">
+        <a asp-action="Feedback" class="filter-chip @(Model.Status is null ? "active" : "")"
+           data-testid="feedback-filter-all">
+            All <span>@Model.Counts.Values.Sum()</span>
+        </a>
+        @foreach (var s in Enum.GetValues<FeedbackStatus>())
+        {
+            <a asp-action="Feedback" asp-route-status="@s"
+               class="filter-chip @(Model.Status == s ? "active" : "")"
+               data-testid="feedback-filter-@s.ToString().ToLower()">
+                @(new Feedback { Status = s }.StatusText()) <span>@Model.Counts[s]</span>
+            </a>
+        }
+    </div>
+
+    <div class="d-grid gap-3" data-testid="admin-feedback-list">
+        @if (!Model.Items.Any())
+        {
+            <div class="empty-state" data-testid="admin-feedback-empty">No feedback here yet.</div>
+        }
+
+        @foreach (var f in Model.Items)
+        {
+            <div class="panel fb-card" data-testid="admin-feedback-item-@f.Id">
+                <div class="row g-3">
+                    <div class="col-md-7 d-flex gap-3">
+                        @if (f.ImageFileName is not null)
+                        {
+                            <a href="@Url.Action("Image", "Feedback", new { id = f.Id })"
+                               target="_blank" class="fb-thumb lg"
+                               data-testid="admin-feedback-image-@f.Id">
+                                <img src="@Url.Action("Image", "Feedback", new { id = f.Id })" alt="Feedback photo" />
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="fb-thumb lg fb-thumb-icon"><i class="bi @f.KindIcon()"></i></span>
+                        }
+                        <div class="min-w-0">
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                                <strong data-testid="admin-feedback-subject-@f.Id">@f.Subject</strong>
+                                <span class="pill @f.StatusPill()" data-testid="admin-feedback-status-@f.Id">@f.StatusText()</span>
+                                <span class="pill pill-muted"><i class="bi @f.KindIcon()"></i>@f.KindText()</span>
+                            </div>
+                            <div class="small text-secondary mb-2">
+                                <i class="bi bi-person"></i> @f.User?.Name (@f.User?.Role, <span class="mono">@f.User?.IdNumber</span>) ·
+                                <i class="bi bi-geo-alt"></i> @(f.Facility is null ? "General" : $"{f.Facility.Name} ({f.Facility.Code})") ·
+                                @AppClock.ToLocal(f.CreatedAt).ToString("dd MMM yyyy, HH:mm")
+                            </div>
+                            <div class="small" data-testid="admin-feedback-description-@f.Id">@f.Description</div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <form asp-action="UpdateFeedback" asp-route-id="@f.Id" method="post"
+                              class="fb-admin-form" data-testid="admin-feedback-form-@f.Id">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="filter" value="@Model.Status" />
+
+                            <label class="form-label small fw-semibold mb-1">Status</label>
+                            <select name="status" class="form-select form-select-sm mb-2"
+                                    data-testid="admin-feedback-status-select-@f.Id">
+                                @foreach (var s in Enum.GetValues<FeedbackStatus>())
+                                {
+                                    <option value="@s" selected="@(f.Status == s)">
+                                        @(new Feedback { Status = s }.StatusText())
+                                    </option>
+                                }
+                            </select>
+
+                            <label class="form-label small fw-semibold mb-1">Reply to user</label>
+                            <textarea name="reply" rows="2" maxlength="1000"
+                                      class="form-control form-control-sm mb-2"
+                                      placeholder="e.g. Technician scheduled for tomorrow morning."
+                                      data-testid="admin-feedback-reply-input-@f.Id">@f.AdminReply</textarea>
+
+                            <button class="btn btn-sm btn-navy rounded-pill px-3"
+                                    data-testid="admin-feedback-save-button-@f.Id">
+                                <i class="bi bi-check2 me-1"></i>Save &amp; notify
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>

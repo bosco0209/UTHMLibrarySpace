@@ -1,0 +1,192 @@
+﻿@model ProfilePageVm
+@{
+    ViewData["Title"] = "My Profile";
+    var u = Model.User;
+    var pwTab = ViewData["PasswordTab"] is true;
+    var avatarUrl = u.AvatarFileName is null ? null : $"/Account/Avatar/{u.Id}?v={u.AvatarFileName.GetHashCode():x}";
+}
+<section class="page-head">
+    <div class="container-xl">
+        <div class="eyebrow">Account</div>
+        <h1 class="page-title">My Profile</h1>
+        <p class="text-secondary mb-0">Update your name and profile picture, or change your password.</p>
+    </div>
+</section>
+<section class="container-xl pb-5">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="panel text-center profile-card" data-testid="profile-summary">
+                <div class="profile-avatar mx-auto mb-3" data-testid="profile-avatar">
+                    @if (avatarUrl is not null)
+                    {
+                        <img src="@avatarUrl" alt="Profile picture" data-testid="profile-avatar-img" />
+                    }
+                    else
+                    {
+
+                        <span>@Ui.Initials(u.Name)</span>
+                    }
+                </div>
+                <h3 class="h5 fw-bold mb-1" data-testid="profile-name">@u.Name</h3>
+                <span class="role-tag role-@u.Role.ToLower()" data-testid="profile-role">@u.Role</span>
+                <dl class="profile-meta text-start mt-4 mb-0">
+                    <dt>@(u.Role == Roles.Student ? "Matric number" : "Staff ID")</dt>
+                    <dd class="mono" data-testid="profile-id-number">@u.IdNumber</dd>
+                    <dt>Email</dt>
+                    <dd data-testid="profile-email">@u.Email</dd>
+                    @if (!string.IsNullOrEmpty(u.Faculty))
+                    {
+                        <dt>Faculty</dt>
+                        <dd data-testid="profile-faculty">@u.Faculty</dd>
+                    }
+                    <dt>Member since</dt>
+                    <dd>@u.CreatedAt.ToString("dd MMM yyyy")</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <ul class="nav nav-pills profile-tabs mb-3" role="tablist">
+                <li class="nav-item"><button class="nav-link @(pwTab ? "" : "active")" data-bs-toggle="pill" data-bs-target="#tab-profile" type="button" data-testid="profile-tab-details"><i class="bi bi-person me-1"></i>Profile details</button></li>
+                <li class="nav-item"><button class="nav-link @(pwTab ? "active" : "")" data-bs-toggle="pill" data-bs-target="#tab-password" type="button" data-testid="profile-tab-password"><i class="bi bi-key me-1"></i>Change password</button></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade @(pwTab ? "" : "show active")" id="tab-profile">
+                    <div class="panel">
+                        <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data" data-testid="profile-form">
+                            <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+                            <label class="form-label fw-semibold">Profile picture</label>
+                            <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+                                <div class="profile-avatar sm" id="avatarPreview">
+                                    @if (avatarUrl is not null)
+                                    {
+                                        <img src="@avatarUrl" alt="" />
+                                    }
+                                    else
+                                    {
+
+                                        <span>@Ui.Initials(u.Name)</span>
+                                    }
+                                </div>
+                                <div>
+                                    <label for="avatarInput" class="btn btn-light rounded-pill px-3 mb-1" data-testid="profile-avatar-choose-button"><i class="bi bi-camera me-1"></i>Choose photo</label>
+                                    <input type="file" id="avatarInput" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="visually-hidden" data-testid="profile-avatar-input" />
+                                    <div class="small text-secondary">JPG, PNG or WebP · max 2 MB</div>
+                                    @if (avatarUrl is not null)
+                                    {
+                                        <div class="form-check mt-1"><input class="form-check-input" type="checkbox" name="removeAvatar" value="true" id="removeAvatar" data-testid="profile-avatar-remove-checkbox" /><label class="form-check-label small" for="removeAvatar">Remove current picture</label></div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Profile.Name" class="form-label fw-semibold"></label>
+                                <input asp-for="Profile.Name" class="form-control form-control-lg rounded-3" data-testid="profile-name-input" />
+                                <span asp-validation-for="Profile.Name" class="text-danger small" data-testid="profile-name-error"></span>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Profile.Phone" class="form-label fw-semibold">Phone number</label>
+                                <input asp-for="Profile.Phone" class="form-control form-control-lg rounded-3" placeholder="e.g. 012-3456789" data-testid="profile-phone-input" />
+                                <span asp-validation-for="Profile.Phone" class="text-danger small"></span>
+                            </div>
+                            <button class="btn btn-navy rounded-pill px-4" data-testid="profile-save-button"><i class="bi bi-check2 me-1"></i>Save changes</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="tab-pane fade @(pwTab ? "show active" : "")" id="tab-password">
+                    <div class="panel">
+                        <form asp-action="ChangePassword" method="post" data-testid="password-form" autocomplete="off">
+                            <div class="mb-3">
+                                <label asp-for="Password.OldPassword" class="form-label fw-semibold"></label>
+                                <input asp-for="Password.OldPassword" class="form-control rounded-3" autocomplete="current-password" data-testid="password-old-input" />
+                                <span asp-validation-for="Password.OldPassword" class="text-danger small" data-testid="password-old-error"></span>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label asp-for="Password.NewPassword" class="form-label fw-semibold"></label>
+                                    <input asp-for="Password.NewPassword" class="form-control rounded-3" autocomplete="new-password" data-testid="password-new-input" />
+                                    <span asp-validation-for="Password.NewPassword" class="text-danger small" data-testid="password-new-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Password.ConfirmPassword" class="form-label fw-semibold"></label>
+                                    <input asp-for="Password.ConfirmPassword" class="form-control rounded-3" autocomplete="new-password" data-testid="password-confirm-input" />
+                                    <span asp-validation-for="Password.ConfirmPassword" class="text-danger small" data-testid="password-confirm-error"></span>
+                                </div>
+                            </div>
+                            <div class="small text-secondary mb-3"><i class="bi bi-shield-lock me-1"></i>At least 6 characters. You'll stay signed in on this device.</div>
+                            <button class="btn btn-gold rounded-pill px-4" data-testid="password-save-button"><i class="bi bi-key me-1"></i>Update password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+
+    <!-- Crop modal -->
+    <div class="modal fade" id="avatarCropModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crop your profile picture</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="max-height:60vh;">
+                        <img id="avatarCropImg" src="" alt="Crop" style="max-width:100%; display:block;" />
+                    </div>
+                    <div class="small text-secondary mt-2">Drag and resize the square area. Only the cropped part will be used.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-navy rounded-pill" id="avatarCropApply">Use this picture</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cropper = null;
+        const cropModalEl = document.getElementById('avatarCropModal');
+        const cropModal = new bootstrap.Modal(cropModalEl);
+
+        document.getElementById('avatarInput')?.addEventListener('change', e => {
+            const f = e.target.files[0]; if (!f) return;
+            const img = document.getElementById('avatarCropImg');
+            const url = URL.createObjectURL(f);
+            img.onload = () => {
+                cropper?.destroy();
+                cropper = new Cropper(img, { aspectRatio: 1 / 1, viewMode: 1, autoCropArea: 0.9, cropBoxResizable: true });
+            };
+            img.src = url;
+            cropModal.show();
+        });
+
+        document.getElementById('avatarCropApply')?.addEventListener('click', () => {
+            if (!cropper) return;
+            cropper.getCroppedCanvas({ width: 512, height: 512 }).toBlob(blob => {
+                if (!blob) return;
+                const dt = new DataTransfer();
+                dt.items.add(new File([blob], 'profile.png', { type: 'image/png' }));
+                const input = document.getElementById('avatarInput');
+                input.files = dt.files;
+
+                const box = document.getElementById('avatarPreview');
+                box.innerHTML = '';
+                const p = document.createElement('img');
+                p.src = URL.createObjectURL(blob);
+                box.appendChild(p);
+                cropper.destroy(); cropper = null;
+                cropModal.hide();
+            }, 'image/png');
+        });
+
+        cropModalEl?.addEventListener('hidden.bs.modal', () => {
+            cropper?.destroy(); cropper = null;
+            // If the user cancelled, clear the selection so they can pick again
+            const input = document.getElementById('avatarInput');
+            if (input && input.files.length && document.getElementById('avatarPreview').querySelector('img') === null) input.value = '';
+        });
+    </script>
+}

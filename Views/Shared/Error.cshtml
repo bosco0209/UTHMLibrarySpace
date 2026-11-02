@@ -1,0 +1,9 @@
+﻿@model string
+@{
+    ViewData["Title"] = "Error";
+}
+<section class="container-xl py-5 text-center">
+    <div class="display-6 font-display mb-2">Something went wrong</div>
+    <p class="text-secondary">Please try again. Request ID: <span class="mono">@Model</span></p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-navy rounded-pill px-4">Back to home</a>
+</section>

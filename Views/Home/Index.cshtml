@@ -1,0 +1,210 @@
+@model List<FacilityCardVm>
+@{
+    ViewData["Title"] = "Book library spaces online";
+    var counts = ViewBag.Counts as Dictionary<FacilityType, int> ?? new();
+    var images = ViewBag.Images as Dictionary<FacilityType, string> ?? new();
+}
+
+<section class="hero" data-testid="hero-section">
+    <div class="hero-bg" style="background-image:url('/img/library-hero.jpg')"></div>
+    <div class="hero-scrim"></div>
+    <div class="container-xl position-relative">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7 reveal">
+                <span class="hero-badge" data-testid="hero-live-badge">
+                    <span class="dot pulse"></span>
+                    <strong class="mono">@ViewBag.AvailableNow/@ViewBag.TotalFacilities</strong> spaces available right now
+                </span>
+                <h1 class="hero-title">Your next great idea needs <em>the right room.</em></h1>
+                <p class="hero-lead">
+                    Book study rooms, meeting rooms, tutorial rooms, halls and technology labs at
+                    <strong>Perpustakaan Tunku Tun Aminah</strong> — in seconds, from anywhere.
+                    No more queueing at the counter.
+                </p>
+                <div class="d-flex flex-wrap gap-3 mt-4">
+                    <a asp-controller="Facilities" asp-action="Index"
+                       class="btn btn-gold btn-lg rounded-pill px-4"
+                       data-testid="hero-browse-button">
+                        Browse facilities <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                    @if (User.Identity?.IsAuthenticated != true)
+                    {
+                        <a asp-controller="Account" asp-action="Login"
+                           class="btn btn-glass btn-lg rounded-pill px-4"
+                           data-testid="hero-login-button">
+                            Sign in with Matric / Staff ID
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Dashboard" asp-action="Index"
+                           class="btn btn-glass btn-lg rounded-pill px-4"
+                           data-testid="hero-dashboard-button">
+                            Go to my dashboard
+                        </a>
+                    }
+                </div>
+                <div class="hero-stats">
+                    <div><span class="mono">@ViewBag.TotalFacilities</span><small>Bookable spaces</small></div>
+                    <div><span class="mono">@ViewBag.BookingsToday</span><small>Bookings today</small></div>
+                    <div><span class="mono">24/7</span><small>AI assistant</small></div>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block reveal" style="--d:.15s">
+                <div class="glass-card hero-panel">
+                    <div class="float-card float-a"><i class="bi bi-check2-circle"></i><div><strong>Carrel rented</strong><div class="text-secondary">30 days · RM20</div></div></div>
+                    <div class="float-card float-b"><i class="bi bi-hourglass-split"></i><div><strong>Hall request</strong><div class="text-secondary">Awaiting approval</div></div></div>
+                    <div class="eyebrow text-white-50 mb-3">Quick find</div>
+                    <form asp-controller="Facilities" asp-action="Index" method="get"
+                          class="d-grid gap-3" data-testid="hero-quick-find-form">
+                        <select name="type" class="form-select form-glass" data-testid="hero-type-select">
+                            <option value="">All facility types</option>
+                            @foreach (var kv in FacilityRules.All)
+                            {
+                                <option value="@Ui.TypeSlug(kv.Key)">@kv.Value.Plural</option>
+                            }
+                        </select>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input name="minCapacity" type="number" min="1"
+                                       class="form-control form-glass"
+                                       placeholder="Min. people"
+                                       data-testid="hero-capacity-input" />
+                            </div>
+                            <div class="col-6">
+                                <input name="search" class="form-control form-glass"
+                                       placeholder="Projector, TV…"
+                                       data-testid="hero-search-input" />
+                            </div>
+                        </div>
+                        <button class="btn btn-gold rounded-pill" data-testid="hero-find-button">
+                            <i class="bi bi-search me-2"></i>Find a space
+                        </button>
+                    </form>
+                    <div class="hero-rule">
+                        <div><i class="bi bi-lightning-charge-fill text-warning"></i> Bilik Iqra' carrels: RM20 a month</div>
+                        <div><i class="bi bi-shield-check text-info"></i> Other rooms reviewed by PTTA staff</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container-xl section" data-testid="categories-section">
+    <div class="row align-items-end mb-4 g-3">
+        <div class="col-lg-7">
+            <div class="eyebrow">Five kinds of space</div>
+            <h2 class="section-title">Spaces built for every way UTHM learns.</h2>
+        </div>
+        <div class="col-lg-5 text-lg-end text-secondary">
+            Permissions follow your role — students and lecturers each see exactly what they can book.
+        </div>
+    </div>
+    <div class="bento">
+        @{
+            var i = 0;
+        }
+        @foreach (var kv in FacilityRules.All)
+        {
+            var rule = kv.Value;
+            var slug = Ui.TypeSlug(kv.Key);
+            var withImage = FacilityRules.ShowsImage(kv.Key);
+            <a asp-controller="Facilities" asp-action="Index" asp-route-type="@slug"
+               class="bento-item bento-@(i) bento-@slug @(withImage ? "" : "bento-plain tile-" + slug)"
+               data-testid="category-card-@slug">
+                @if (withImage)
+                {
+                    <img src="@(images.GetValueOrDefault(kv.Key) ?? "/img/facility-placeholder.jpg")"
+                         alt="@rule.Plural" loading="lazy" />
+                }
+                else
+                {
+                    <i class="bi @rule.Icon bento-watermark" aria-hidden="true"></i>
+                }
+                <div class="bento-scrim"></div>
+                <div class="bento-content">
+                    <span class="bento-icon"><i class="bi @rule.Icon"></i></span>
+                    <h3>@rule.Plural</h3>
+                    <p>@rule.Blurb</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="glass-pill">@FacilityRules.FeeText(kv.Key)</span>
+                        <span class="glass-pill">@FacilityRules.RolesText(kv.Key)</span>
+                        <span class="glass-pill">@counts.GetValueOrDefault(kv.Key) rooms</span>
+                    </div>
+                </div>
+            </a>
+            i++;
+        }
+    </div>
+</section>
+
+<section class="section-tint" data-testid="how-it-works-section">
+    <div class="container-xl section">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5">
+                <div class="eyebrow">How it works</div>
+                <h2 class="section-title">From idea to booked room in under a minute.</h2>
+                <p class="text-secondary">
+                    UTHM Library Space replaces the paper logbook with a single, real-time system —
+                    so you always know what's free, and staff always know what's happening.
+                </p>
+            </div>
+            <div class="col-lg-7">
+                <div class="steps">
+                    <div class="step">
+                        <span class="step-n mono">01</span>
+                        <div><h4>Sign in</h4><p>Use your UTHM email, matric number or staff ID.</p></div>
+                    </div>
+                    <div class="step">
+                        <span class="step-n mono">02</span>
+                        <div><h4>Pick a space &amp; time</h4><p>See live availability and choose any custom start &amp; end time between 08:00 and 22:00.</p></div>
+                    </div>
+                    <div class="step">
+                        <span class="step-n mono">03</span>
+                        <div><h4>Get confirmed</h4><p>Bilik Iqra' carrels are rented for a whole month (RM20, pay at the counter) and confirmed instantly. Other rooms are approved by PTTA staff, and you'll get a notification.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container-xl section" data-testid="featured-section">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <div class="eyebrow">Live right now</div>
+            <h2 class="section-title mb-0">Featured spaces</h2>
+        </div>
+        <a asp-controller="Facilities" asp-action="Index"
+           class="btn btn-outline-navy rounded-pill"
+           data-testid="featured-view-all-button">
+            View all <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    <div class="row g-4">
+        @foreach (var c in Model)
+        {
+            <div class="col-md-6 col-xl-4">
+                <partial name="_FacilityCard" model="c" />
+            </div>
+        }
+    </div>
+</section>
+
+<section class="container-xl pb-5">
+    <div class="cta-band" data-testid="cta-band">
+        <div>
+            <div class="eyebrow text-warning">Questions at 2 AM?</div>
+            <h2 class="font-display text-white mb-2">Ask PTTA Assist, our Gemini-powered librarian.</h2>
+            <p class="text-white-50 mb-0">
+                Opening hours, fees, booking rules, WiFi — instant answers in English or Bahasa Melayu.
+            </p>
+        </div>
+        <button class="btn btn-gold btn-lg rounded-pill px-4"
+                onclick="window.openChat && window.openChat()"
+                data-testid="cta-open-chat-button">
+            <i class="bi bi-stars me-2"></i>Chat now
+        </button>
+    </div>
+</section>

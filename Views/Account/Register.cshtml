@@ -1,0 +1,215 @@
+@model RegisterVm
+@{
+    ViewData["Title"] = "Create account";
+}
+<section class="auth-wrap">
+    <div class="auth-side" style="background-image:url('https://images.unsplash.com/photo-1739918075668-fc7844c6d921?auto=format&fit=crop&w=1400&q=80')">
+        <div class="auth-side-scrim"></div>
+        <div class="auth-side-content">
+            <div class="eyebrow text-warning">Join UTHM Library Space</div>
+            <h1 class="font-display text-white display-5 mb-3">One account. Every library space.</h1>
+            <ul class="auth-perks">
+                <li><i class="bi bi-mortarboard"></i><div><strong>Students</strong> — Bilik Iqra' carrels (RM20 for a 1-month rental, instant) and Meeting Rooms (free, needs approval).</div></li>
+                <li><i class="bi bi-person-workspace"></i><div><strong>Lecturers</strong> — Meeting, Tutorial, Hall and Technology rooms with admin approval.</div></li>
+                <li><i class="bi bi-bell"></i><div>Real-time notifications for every approval, rejection and announcement.</div></li>
+            </ul>
+        </div>
+    </div>
+    <div class="auth-form-col">
+        <div class="auth-card reveal">
+            <h2 class="font-display mb-1">Create your account</h2>
+            <p class="text-secondary mb-4">Verified with your matric number or staff ID.</p>
+            <form asp-action="Register" method="post" data-testid="register-form" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-4 small py-2" data-testid="register-error"></div>
+                <div class="role-switch mb-3" role="radiogroup">
+                    <input type="radio" class="btn-check" asp-for="Role" value="Student" id="roleStudent" />
+                    <label class="role-opt" for="roleStudent" data-testid="register-role-student"><i class="bi bi-mortarboard"></i>Student</label>
+                    <input type="radio" class="btn-check" asp-for="Role" value="Lecturer" id="roleLecturer" />
+                    <label class="role-opt" for="roleLecturer" data-testid="register-role-lecturer"><i class="bi bi-person-workspace"></i>Lecturer</label>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label asp-for="Name" class="form-label small fw-semibold"></label>
+                        <input asp-for="Name" class="form-control" placeholder="As per student / staff card" data-testid="register-name-input" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="IdNumber" class="form-label small fw-semibold" id="idLabel"></label>
+                        <input asp-for="IdNumber" class="form-control mono" placeholder="AI240119" data-testid="register-id-input" />
+                        <span asp-validation-for="IdNumber" class="text-danger small" id="idValidation"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Faculty" class="form-label small fw-semibold"></label>
+                        <select asp-for="Faculty" class="form-select" data-testid="register-faculty-select">
+                            <option value="FSKTM">FSKTM – Computer Science & IT</option>
+                            <option value="FKEE">FKEE – Electrical & Electronic Eng.</option>
+                            <option value="FKMP">FKMP – Mechanical & Manufacturing Eng.</option>
+                            <option value="FKAAB">FKAAB – Civil Eng. & Built Environment</option>
+                            <option value="FPTP">FPTP – Technology Management & Business</option>
+                            <option value="FAST">FAST – Applied Sciences & Technology</option>
+                            <option value="FPTV">FPTV – Technical & Vocational Education</option>
+                            <option value="FTK">FTK – Engineering Technology</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="CountryCode" class="form-label small fw-semibold"></label>
+                        <select asp-for="CountryCode" class="form-select" data-testid="register-country-code">
+                            <option value="+60">+60 (Malaysia)</option>
+                            <option value="+62">+62 (Indonesia)</option>
+                            <option value="+66">+66 (Thailand)</option>
+                            <option value="+65">+65 (Singapore)</option>
+                            <option value="+84">+84 (Vietnam)</option>
+                            <option value="+91">+91 (India)</option>
+                            <option value="+86">+86 (China)</option>
+                            <option value="+1">+1 (US/Canada)</option>
+                            <option value="+44">+44 (UK)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="Phone" class="form-label small fw-semibold"></label>
+                        <input asp-for="Phone" class="form-control" placeholder="e.g. 012-3456789" data-testid="register-phone-input" />
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Email" class="form-label small fw-semibold"></label>
+                        <input asp-for="Email" class="form-control" placeholder="ai240119@student.uthm.edu.my" data-testid="register-email-input" />
+                        <span asp-validation-for="Email" class="text-danger small" id="emailValidation"></span>
+                        <div class="form-text small text-secondary" id="emailHint">
+                            Students: use your student email (…@@student.uthm.edu.my).
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Password" class="form-label small fw-semibold"></label>
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" placeholder="" data-testid="register-password-input" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ConfirmPassword" class="form-label small fw-semibold"></label>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" placeholder="" data-testid="register-confirm-password-input" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+                </div>
+                <button class="btn btn-navy btn-lg w-100 rounded-pill mt-4" data-testid="register-submit-button">Create account</button>
+            </form>
+            <p class="text-center small text-secondary mt-4 mb-0">Already registered? <a asp-action="Login" class="fw-semibold" data-testid="register-login-link">Sign in</a></p>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        const form = document.querySelector('[data-testid=register-form]');
+        const idInput = document.querySelector('[data-testid=register-id-input]');
+        const emailInput = document.querySelector('[data-testid=register-email-input]');
+        const emailHint = document.getElementById('emailHint');
+        const idValidation = document.getElementById('idValidation');
+        const emailValidation = document.getElementById('emailValidation');
+        const pwInput = document.querySelector('[data-testid=register-password-input]');
+        const confirmPwInput = document.querySelector('[data-testid=register-confirm-password-input]');
+
+        // Ensure password fields do not show stars initially (clear any browser autofill)
+        function clearAutofilledPasswords() {
+            if (pwInput && !pwInput.dataset.typed) pwInput.value = '';
+            if (confirmPwInput && !confirmPwInput.dataset.typed) confirmPwInput.value = '';
+        }
+        pwInput?.addEventListener('input', () => { pwInput.dataset.typed = 'true'; });
+        confirmPwInput?.addEventListener('input', () => { confirmPwInput.dataset.typed = 'true'; });
+        window.addEventListener('pageshow', clearAutofilledPasswords);
+        document.addEventListener('DOMContentLoaded', clearAutofilledPasswords);
+        setTimeout(clearAutofilledPasswords, 50);
+        setTimeout(clearAutofilledPasswords, 200);
+
+        let emailManuallyEdited = false;
+
+        function syncRole() {
+            const lecturer = document.getElementById('roleLecturer').checked;
+            document.getElementById('idLabel').textContent = lecturer ? 'Staff ID' : 'Matric No.';
+            idInput.placeholder = lecturer ? 'STF1234' : 'AI240119';
+            emailInput.placeholder = lecturer ? 'name@uthm.edu.my' : 'ai240119@student.uthm.edu.my';
+
+            if (emailHint) {
+                emailHint.textContent = lecturer
+                    ? 'Lecturers: use your staff email (…@@uthm.edu.my).'
+                    : 'Students: use your student email (…@@student.uthm.edu.my). Matric number must match your student email.';
+            }
+            validateMatricEmail();
+        }
+
+        function validateMatricEmail() {
+            const isStudent = document.getElementById('roleStudent').checked;
+            if (!isStudent) {
+                if (idValidation && idValidation.dataset.customErr) {
+                    idValidation.textContent = '';
+                    delete idValidation.dataset.customErr;
+                }
+                if (emailValidation && emailValidation.dataset.customErr) {
+                    emailValidation.textContent = '';
+                    delete emailValidation.dataset.customErr;
+                }
+                return true;
+            }
+
+            const idVal = (idInput.value || '').trim();
+            const emailVal = (emailInput.value || '').trim();
+
+            if (!idVal || !emailVal) {
+                if (idValidation && idValidation.dataset.customErr) {
+                    idValidation.textContent = '';
+                    delete idValidation.dataset.customErr;
+                }
+                if (emailValidation && emailValidation.dataset.customErr) {
+                    emailValidation.textContent = '';
+                    delete emailValidation.dataset.customErr;
+                }
+                return true;
+            }
+
+            const emailPrefix = emailVal.includes('@@') ? emailVal.split('@@')[0] : emailVal;
+            if (idVal.toLowerCase() !== emailPrefix.toLowerCase()) {
+                if (idValidation) {
+                    idValidation.textContent = 'Matric number must match your student email.';
+                    idValidation.dataset.customErr = 'true';
+                }
+                return false;
+            } else {
+                if (idValidation && idValidation.dataset.customErr) {
+                    idValidation.textContent = '';
+                    delete idValidation.dataset.customErr;
+                }
+                if (emailValidation && emailValidation.dataset.customErr) {
+                    emailValidation.textContent = '';
+                    delete emailValidation.dataset.customErr;
+                }
+                return true;
+            }
+        }
+
+        // Live syncing for student matric and email
+        idInput.addEventListener('input', () => {
+            const isStudent = document.getElementById('roleStudent').checked;
+            if (isStudent && !emailManuallyEdited) {
+                const matric = idInput.value.trim().toLowerCase();
+                emailInput.value = matric ? `${matric}@@student.uthm.edu.my` : '';
+            }
+            validateMatricEmail();
+        });
+
+        emailInput.addEventListener('input', () => {
+            emailManuallyEdited = true;
+            validateMatricEmail();
+        });
+
+        form?.addEventListener('submit', (e) => {
+            if (!validateMatricEmail()) {
+                e.preventDefault();
+                idInput.focus();
+            }
+        });
+
+        document.querySelectorAll('input[name=Role]').forEach(r => r.addEventListener('change', () => {
+            emailManuallyEdited = false;
+            syncRole();
+        }));
+        syncRole();
+    </script>
+}

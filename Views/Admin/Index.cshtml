@@ -1,0 +1,242 @@
+@model AdminDashboardVm
+@{
+    ViewData["Title"] = "Admin console";
+    var ret = Context.Request.Path.ToString();
+}
+<section class="page-head admin-head">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow text-warning">PTTA command center</div>
+            <h1 class="page-title text-white">Admin console</h1>
+            <p class="text-white-50 mb-0">@AppClock.Now.ToString("dddd, d MMMM yyyy · HH:mm") (MYT)</p>
+        </div>
+        <a asp-action="ExportPdf" class="btn btn-gold rounded-pill px-4"
+           data-testid="admin-export-pdf-button">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF report
+        </a>
+    </div>
+</section>
+
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <i class="bi bi-calendar2-check"></i>
+                <span class="mono" data-testid="admin-stat-total">@Model.TotalBookings</span>
+                <small>Total bookings</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a asp-action="Bookings" asp-route-status="Pending"
+               class="stat-card stat-amber d-block text-decoration-none">
+                <i class="bi bi-hourglass-split"></i>
+                <span class="mono" data-testid="admin-stat-pending">@Model.Pending</span>
+                <small>Pending approvals</small>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <i class="bi bi-clock-history"></i>
+                <span class="mono" data-testid="admin-stat-today">@Model.TodayBookings</span>
+                <small>Bookings today</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-gold">
+                <i class="bi bi-cash-stack"></i>
+                <span class="mono" data-testid="admin-stat-revenue">RM @Model.Revenue.ToString("0.00")</span>
+                <small>Collected · RM @Model.Outstanding.ToString("0.00") due</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="panel h-100">
+                <div class="d-flex justify-content-between mb-2">
+                    <h3 class="h6 fw-bold mb-0">Bookings by facility type</h3>
+                    <span class="small text-secondary">all time</span>
+                </div>
+                <canvas id="typeBarChart" height="120" data-testid="admin-chart-types-bar"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="panel h-100">
+                <h3 class="h6 fw-bold mb-2">Rooms by facility type</h3>
+                <canvas id="typeChart" height="220" data-testid="admin-chart-types"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="panel h-100" data-testid="admin-pending-queue">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h6 fw-bold mb-0">Approval queue</h3>
+                    <a asp-action="Bookings" asp-route-status="Pending" class="small fw-semibold">See all</a>
+                </div>
+                @if (!Model.PendingQueue.Any())
+                {
+                    <p class="small text-secondary">No pending requests ??</p>
+                }
+                @foreach (var b in Model.PendingQueue)
+                {
+                    <div class="queue-row" data-testid="pending-row-@b.Reference">
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold text-truncate">@b.Facility!.Name</div>
+                            <div class="small text-secondary">
+                                <span class="mono">@b.DateText · @b.TimeText</span> ·
+                                @b.User!.Name
+                                <span class="role-tag role-@b.User.Role.ToLower()">@b.User.Role</span>
+                            </div>
+                            <div class="small text-truncate">
+                                @b.Purpose · @b.Attendees pax
+                                @if (b.HasProof)
+                                {
+                                    <a asp-action="ProofFile" asp-route-id="@b.Id" target="_blank" class="small"
+                                       data-testid="pending-view-proof-@b.Reference">
+                                        <i class="bi bi-paperclip"></i> View proof of payment
+                                    </a>
+                                }
+                                else if (b.AwaitingProof)
+                                {
+                                    <div class="small text-warning-emphasis" data-testid="pending-awaiting-proof-@b.Reference">
+                                        <i class="bi bi-hourglass"></i> Waiting for proof of payment
+                                    </div>
+                                }
+                                @if (b.AwaitingProof)
+                                {
+                                    <span class="badge bg-warning-subtle text-warning-emphasis ms-2">Proof pending</span>
+                                }
+                                else if (b.PaymentStatus == PaymentStatus.ProofSubmitted)
+                                {
+                                    <span class="badge bg-info-subtle text-info-emphasis ms-2">Proof submitted</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form asp-action="Approve" asp-route-id="@b.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="returnUrl" value="@ret" />
+                                <button type="submit"
+                                        class="btn btn-sm btn-success rounded-pill px-3"
+                                    @(b.AwaitingProof ? "disabled" : "")
+                                        title="@(b.AwaitingProof ? "Waiting for proof of payment" : "Approve")"
+                                        data-testid="admin-approve-button-@b.Reference">
+                                    <i class="bi bi-check-lg"></i> Approve
+                                </button>
+                            </form>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#rejectModal"
+                                    data-id="@b.Id"
+                                    data-ref="@b.Reference"
+                                    data-testid="admin-reject-button-@b.Reference">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="panel mb-4">
+                <h3 class="h6 fw-bold mb-2">Peak hours (active bookings)</h3>
+                <canvas id="hourChart" height="150" data-testid="admin-chart-hours"></canvas>
+            </div>
+            <div class="panel" data-testid="admin-today-schedule">
+                <h3 class="h6 fw-bold mb-3">Today's schedule</h3>
+                @if (!Model.TodaySchedule.Any())
+                {
+                    <p class="small text-secondary mb-0">No sessions today.</p>
+                }
+                @foreach (var b in Model.TodaySchedule)
+                {
+                    <div class="slot-row">
+                        <span class="mono">@b.StartTime.ToString("HH:mm")</span>
+                        <span class="flex-grow-1 small text-truncate px-2">@b.Facility!.Name · @b.User!.Name</span>
+                        <partial name="_StatusBadge" model="b.Status" />
+                    </div>
+                }
+                <div class="small text-secondary mt-3">
+                    <i class="bi bi-people me-1"></i>@Model.TotalUsers users ·
+                    <i class="bi bi-door-open ms-1 me-1"></i>@Model.TotalFacilities facilities ·
+                    <i class="bi bi-tools ms-1 me-1"></i>@Model.Maintenance in maintenance
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<partial name="_RejectModal" model="ret" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.color = '#64748B';
+
+        // Bar chart — bookings per facility type (all time)
+        new Chart(document.getElementById('typeBarChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TypeLabels)),
+                datasets: [{
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TypeCounts)),
+                    backgroundColor: ['#D97706', '#0284C7', '#1E3E62', '#047857', '#BE123C'],
+                    borderRadius: 8,
+                    maxBarThickness: 56
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EEF2F7' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('typeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RoomLabels)),
+                datasets: [{
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RoomCounts)),
+                    backgroundColor: ['#D97706', '#0284C7', '#1E3E62', '#047857', '#BE123C'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '68%',
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }
+            }
+        });
+
+        // Line — peak hours
+        new Chart(document.getElementById('hourChart'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.HourLabels)),
+                datasets: [{
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.HourCounts)),
+                    borderColor: '#D97706',
+                    backgroundColor: 'rgba(217,119,6,.12)',
+                    fill: true,
+                    tension: .4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EEF2F7' } },
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 7 } }
+                }
+            }
+        });
+    </script>
+}

@@ -1,0 +1,244 @@
+﻿@model AdminBookingsVm
+@{
+    ViewData["Title"] = "Bookings & approvals";
+    var ret = Context.Request.Path + Context.Request.QueryString;
+}
+
+<section class="page-head admin-head">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow text-warning">PTTA command center</div>
+            <h1 class="page-title text-white">Bookings &amp; approvals</h1>
+        </div>
+        <a asp-action="ExportPdf"
+           asp-route-status="@Model.Status"
+           asp-route-type="@Model.Type"
+           asp-route-search="@Model.Search"
+           class="btn btn-gold rounded-pill px-4"
+           data-testid="admin-bookings-export-pdf-button">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Export filtered PDF
+        </a>
+    </div>
+</section>
+
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+
+    @if (Model.KeyReturns.Any())
+    {
+        <div class="panel p-0 overflow-hidden mb-4" data-testid="admin-keyreturns-panel">
+            <div class="p-3 pb-2 d-flex align-items-center gap-2">
+                <i class="bi bi-key-fill text-danger"></i>
+                <h3 class="h6 fw-bold mb-0">Bilik Iqra' — bookings ended, key collection needed</h3>
+                <span class="badge text-bg-danger">@Model.KeyReturns.Count</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table app-table align-middle mb-0 small">
+                    <thead>
+                        <tr><th>Name</th><th>Email</th><th>Phone</th><th>Faculty</th><th>Reference</th><th>Rental period</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model.KeyReturns)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@b.User!.Name</td>
+                                <td>@b.User.Email</td>
+                                <td>@(string.IsNullOrEmpty(b.User.Phone) ? "—" : b.User.Phone)</td>
+                                <td>@b.User.Faculty</td>
+                                <td class="mono">@b.Reference</td>
+                                <td class="mono">@b.Date.ToString("dd MMM") – @b.EndDate.ToString("dd MMM yyyy")</td>
+                                <td><partial name="_StatusBadge" model="b.Status" /></td>
+                                <td>
+                                    <form asp-action="CollectKey" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@b.Id" />
+                                        <button class="btn btn-sm btn-navy rounded-pill px-3" data-testid="collect-key-@b.Reference">
+                                            <i class="bi bi-key me-1"></i>Collect
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <form method="get" class="panel d-flex flex-wrap gap-2 align-items-center mb-4"
+          data-testid="admin-bookings-filter-form">
+        <select name="status" class="form-select" style="max-width:190px"
+                data-testid="admin-bookings-status-filter">
+            <option value="">All statuses</option>
+            @foreach (var s in Enum.GetValues<BookingStatus>())
+            {
+                <option value="@s" selected="@(Model.Status == s)">@s</option>
+            }
+        </select>
+        <select name="type" class="form-select" style="max-width:210px"
+                data-testid="admin-bookings-type-filter">
+            <option value="">All facility types</option>
+            @foreach (var kv in FacilityRules.All)
+            {
+                <option value="@kv.Key" selected="@(Model.Type == kv.Key)">@kv.Value.Plural</option>
+            }
+        </select>
+        <div class="input-icon flex-grow-1">
+            <i class="bi bi-search"></i>
+            <input name="search" value="@Model.Search" class="form-control"
+                   placeholder="Reference, name, matric / staff ID, facility"
+                   data-testid="admin-bookings-search-input" />
+        </div>
+        <button class="btn btn-navy rounded-pill px-4" data-testid="admin-bookings-filter-button">Filter</button>
+        <a asp-action="Bookings" class="btn btn-light rounded-pill">Reset</a>
+    </form>
+
+    <div class="panel p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table app-table align-middle mb-0" data-testid="admin-bookings-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>When</th>
+                        <th>Facility</th>
+                        <th>Booked by</th>
+                        <th>Fee</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Bookings.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-secondary py-5">
+                                No bookings match these filters.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var b in Model.Bookings)
+                    {
+                        <tr data-testid="admin-booking-row-@b.Reference">
+                            <td><span class="mono fw-semibold">@b.Reference</span></td>
+
+                            <td>
+                                <div class="fw-semibold small">@b.DateText</div>
+                                <div class="mono small text-secondary">@b.TimeText</div>
+                            </td>
+
+                            <td>
+                                <div class="small fw-semibold">@b.Facility!.Name</div>
+                                <div class="small text-secondary text-truncate" style="max-width:220px">
+                                    @b.Purpose · @b.Attendees pax
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="small fw-semibold">@b.User!.Name</div>
+                                <div class="small">
+                                    <span class="mono text-secondary">@b.User.IdNumber</span>
+                                    <span class="role-tag role-@b.User.Role.ToLower()">@b.User.Role</span>
+                                </div>
+                            </td>
+
+                            <td class="small">
+                                @if (b.Fee > 0)
+                                {
+                                    <div class="mono">RM@(b.Fee.ToString("0.00"))</div>
+                                    <div class="@(b.PaymentStatus == PaymentStatus.Paid ? "text-success" : "text-warning-emphasis")"
+                                         data-testid="admin-payment-status-@b.Reference">
+                                        @b.PaymentText
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-secondary">Free</div>
+                                    @if (b.PaymentStatus is PaymentStatus.AwaitingProof or PaymentStatus.ProofSubmitted)
+                                    {
+                                        <div class="text-warning-emphasis"
+                                             data-testid="admin-payment-status-@b.Reference">
+                                            @b.PaymentText
+                                        </div>
+                                    }
+                                }
+
+                                @if (b.HasProof)
+                                {
+                                    <a asp-action="ProofFile" asp-route-id="@b.Id" target="_blank"
+                                       class="d-inline-block mt-1"
+                                       data-testid="admin-view-proof-@b.Reference">
+                                        <i class="bi bi-paperclip"></i> View proof
+                                    </a>
+                                }
+                            </td>
+
+                            <td>
+                                <partial name="_StatusBadge" model="b.Status" />
+                                @if (!string.IsNullOrEmpty(b.AdminNote))
+                                {
+                                    <div class="small text-secondary mt-1" title="@b.AdminNote">
+                                        <i class="bi bi-chat-left-text"></i> note
+                                    </div>
+                                }
+                            </td>
+
+                            <td class="text-end text-nowrap">
+                                @if (b.Status == BookingStatus.Pending)
+                                {
+                                    <form asp-action="Approve" asp-route-id="@b.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="returnUrl" value="@ret" />
+                                        <button type="submit"
+                                                class="btn btn-sm btn-success rounded-pill px-3"
+                                            @(b.AwaitingProof ? "disabled" : "")
+                                                title="@(b.AwaitingProof ? "Waiting for proof of payment" : "Approve")"
+                                                data-testid="admin-approve-button-@b.Reference">
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#rejectModal"
+                                            data-id="@b.Id"
+                                            data-ref="@b.Reference"
+                                            data-testid="admin-reject-button-@b.Reference">
+                                        Reject
+                                    </button>
+                                }
+
+                                @if (b.PaymentStatus is PaymentStatus.PayAtCounter or PaymentStatus.ProofSubmitted && b.IsActive)
+                                {
+                                    <form asp-action="MarkPaid" asp-route-id="@b.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="returnUrl" value="@ret" />
+                                        <button class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                                data-testid="admin-mark-paid-button-@b.Reference">
+                                            <i class="bi bi-cash"></i> Paid
+                                        </button>
+                                    </form>
+                                }
+
+                                @if (b.Status is BookingStatus.Confirmed or BookingStatus.Approved)
+                                {
+                                    <form asp-action="CancelBooking" asp-route-id="@b.Id" method="post"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Cancel @b.Reference and notify the user?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="returnUrl" value="@ret" />
+                                        <button class="btn btn-sm btn-light rounded-pill px-3"
+                                                data-testid="admin-cancel-button-@b.Reference">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<partial name="_RejectModal" model="ret" />

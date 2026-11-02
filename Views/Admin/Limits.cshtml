@@ -1,0 +1,57 @@
+﻿@model AdminLimitsVm
+@{
+    ViewData["Title"] = "Booking rules";
+}
+<section class="page-head admin-head">
+    <div class="container-xl">
+        <div class="eyebrow text-warning">PTTA command center</div>
+        <h1 class="page-title text-white">Booking rules</h1>
+        <p class="text-white-50 mb-0">Set limits for each room category. Leave a field empty for no limit. New bookings are checked against these rules straight away.</p>
+    </div>
+</section>
+<section class="container-xl pb-5 admin-body">
+    <partial name="_AdminNav" />
+    <div class="row g-4">
+        @foreach (var l in Model.Limits)
+        {
+            var rule = FacilityRules.For(l.Type);
+            var rental = FacilityRules.IsMonthlyRental(l.Type);
+            var slug = Ui.TypeSlug(l.Type);
+            <div class="col-md-6 col-xl-4">
+                <form asp-action="SaveLimit" method="post" class="panel limit-card h-100 d-flex flex-column" data-testid="limit-form-@slug">
+                    <input type="hidden" name="type" value="@l.Type" />
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="cat-icon lg tile-@slug"><i class="bi @rule.Icon"></i></span>
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">@rule.Plural</h3>
+                            <div class="small text-secondary">@FacilityRules.FeeText(l.Type) · @FacilityRules.RolesText(l.Type)</div>
+                        </div>
+                    </div>
+                    @if (rental)
+                    {
+                        <div class="rule-strip small mb-3"><i class="bi bi-calendar-range"></i><div>Study rooms are rented for <strong>30 days</strong> (all day). Hour limits don't apply to them.</div></div>
+                    }
+                    else
+                    {
+                        <label class="form-label small fw-semibold">Max hours per booking</label>
+                        <div class="input-group mb-3">
+                            <input type="number" step="0.5" min="0.5" max="14" name="maxHoursPerBooking" value="@l.MaxHoursPerBooking" class="form-control" placeholder="No limit" data-testid="limit-per-booking-@slug" />
+                            <span class="input-group-text">hours</span>
+                        </div>
+                        <label class="form-label small fw-semibold">Max hours per week (per user)</label>
+                        <div class="input-group mb-3">
+                            <input type="number" step="0.5" min="0.5" max="98" name="maxHoursPerWeek" value="@l.MaxHoursPerWeek" class="form-control" placeholder="No limit" data-testid="limit-per-week-@slug" />
+                            <span class="input-group-text">hours</span>
+                        </div>
+                    }
+                    <label class="form-label small fw-semibold">@(rental ? "Max active monthly rentals per user" : "Max active bookings per user")</label>
+                    <div class="input-group mb-4">
+                        <input type="number" step="1" min="1" max="50" name="maxActiveBookings" value="@l.MaxActiveBookings" class="form-control" placeholder="No limit" data-testid="limit-active-@slug" />
+                        <span class="input-group-text">@(rental ? "rentals" : "bookings")</span>
+                    </div>
+                    <button class="btn btn-navy rounded-pill mt-auto" data-testid="limit-save-@slug"><i class="bi bi-check2 me-1"></i>Save rules</button>
+                </form>
+            </div>
+        }
+    </div>
+</section>

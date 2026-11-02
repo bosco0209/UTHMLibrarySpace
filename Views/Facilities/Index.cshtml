@@ -1,0 +1,65 @@
+﻿@model FacilityIndexVm
+@{
+    ViewData["Title"] = "Facilities";
+    var total = Model.Counts.Values.Sum();
+}
+<section class="page-head">
+    <div class="container-xl">
+        <div class="eyebrow">Live availability</div>
+        <h1 class="page-title">Find your space</h1>
+        <p class="text-secondary mb-0">
+            @Model.Items.Count of @total spaces shown · availability updates in real time
+            @if (Model.Role is not null && Model.Role != Roles.Admin)
+            {
+                <span>· you're browsing as <span class="role-tag role-@Model.Role.ToLower()">@Model.Role</span></span>
+            }
+        </p>
+    </div>
+</section>
+
+<section class="container-xl pb-5">
+    <div class="filter-bar mb-4" data-testid="facility-filter-bar">
+        <div class="filter-pills">
+            <a asp-action="Index" asp-route-search="@Model.Search" asp-route-minCapacity="@Model.MinCapacity" class="fpill @(Model.Type is null ? "active" : "")" data-testid="filter-pill-all">All <span>@total</span></a>
+            @foreach (var kv in FacilityRules.All)
+            {
+                <a asp-action="Index" asp-route-type="@kv.Key" asp-route-search="@Model.Search" asp-route-minCapacity="@Model.MinCapacity" class="fpill @(Model.Type == kv.Key ? "active" : "")" data-testid="filter-pill-@Ui.TypeSlug(kv.Key)">
+                    <i class="bi @kv.Value.Icon"></i>@kv.Value.Plural <span>@Model.Counts.GetValueOrDefault(kv.Key)</span>
+                </a>
+            }
+        </div>
+        <form method="get" class="filter-form" data-testid="facility-search-form">
+            @if (Model.Type is not null)
+            {
+                <input type="hidden" name="type" value="@Model.Type" />
+            }
+            <div class="input-icon flex-grow-1"><i class="bi bi-search"></i><input name="search" value="@Model.Search" class="form-control" placeholder="Search name, code or amenity" data-testid="facility-search-input" /></div>
+            <input name="minCapacity" value="@Model.MinCapacity" type="number" min="1" class="form-control" style="max-width:130px" placeholder="Min. pax" data-testid="facility-capacity-input" />
+            <button class="btn btn-navy rounded-pill px-4" data-testid="facility-search-button">Search</button>
+        </form>
+    </div>
+
+    @if (Model.Type is { } t)
+    {
+        var rule = FacilityRules.For(t);
+        <div class="rule-strip mb-4" data-testid="facility-type-rule">
+            <i class="bi @rule.Icon"></i>
+            <div><strong>@rule.Plural</strong> · @FacilityRules.FeeText(t) · @(rule.RequiresApproval ? "Requires administrator approval" : "Instant confirmation") · For @FacilityRules.RolesText(t)</div>
+        </div>
+    }
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state" data-testid="facility-empty-state">
+            <span class="empty-icon"><i class="bi bi-search"></i></span>
+            <h3>No spaces match your filters</h3>
+            <a asp-action="Index" class="btn btn-outline-navy rounded-pill">Clear filters</a>
+        </div>
+    }
+    <div class="row g-4">
+        @foreach (var c in Model.Items)
+        {
+            <div class="col-md-6 col-xl-4 reveal"><partial name="_FacilityCard" model="c" /></div>
+        }
+    </div>
+</section>

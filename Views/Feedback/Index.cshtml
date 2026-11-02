@@ -1,0 +1,156 @@
+﻿@model FeedbackPageVm
+@{
+    ViewData["Title"] = "Feedback";
+    var groups = Model.Facilities.GroupBy(f => f.Type);
+}
+<section class="page-head">
+    <div class="container-xl">
+        <div class="eyebrow">Help us improve PTTA</div>
+        <h1 class="page-title">Feedback &amp; reports</h1>
+        <p class="text-secondary mb-0">Spotted something broken, or have a question about a facility? Send a photo and a short description, and the library team will follow up.</p>
+    </div>
+</section>
+<section class="container-xl pb-5">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <form asp-action="Submit" method="post" enctype="multipart/form-data" class="panel sticky-lg-top" style="top:96px" data-testid="feedback-form">
+                <h3 class="h6 fw-bold mb-3">New feedback</h3>
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+                <label class="form-label small fw-semibold">Type</label>
+                <div class="fb-kinds mb-3" role="radiogroup">
+                    @foreach (var k in Enum.GetValues<FeedbackKind>())
+                    {
+                        var tmp = new Feedback { Kind = k };
+                        <input type="radio" class="btn-check" name="Form.Kind" id="kind-@k" value="@k"
+                               checked="@(Model.Form.Kind == k)" data-testid="feedback-kind-@k.ToString().ToLower()" />
+                        <label class="fb-kind" for="kind-@k">
+                            <i class="bi @tmp.KindIcon()"></i>@tmp.KindText()
+                        </label>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.FacilityId" class="form-label small fw-semibold">
+                        Facility <span class="text-secondary fw-normal">(optional)</span>
+                    </label>
+                    <select asp-for="Form.FacilityId" class="form-select" data-testid="feedback-facility-select">
+                        <option value="">General / not about a specific room</option>
+                        @foreach (var g in groups)
+                        {
+                            <optgroup label="@FacilityRules.For(g.Key).Plural">
+                                @foreach (var f in g)
+                                {
+                                    <option value="@f.Id">@f.Name (@f.Code)</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <span asp-validation-for="Form.FacilityId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Subject" class="form-label small fw-semibold">Subject</label>
+                    <input asp-for="Form.Subject" class="form-control"
+                           placeholder="e.g. Projector not turning on"
+                           data-testid="feedback-subject-input" />
+                    <span asp-validation-for="Form.Subject" class="text-danger small" data-testid="feedback-subject-error"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Form.Description" class="form-label small fw-semibold">Description</label>
+                    <textarea asp-for="Form.Description" rows="4" class="form-control"
+                              placeholder="What happened, where exactly, and when did you notice it?"
+                              data-testid="feedback-description-input"></textarea>
+                    <span asp-validation-for="Form.Description" class="text-danger small" data-testid="feedback-description-error"></span>
+                </div>
+
+                <label class="form-label small fw-semibold">
+                    Photo <span class="text-secondary fw-normal">(optional)</span>
+                </label>
+                <label class="dropzone py-4 mb-1" for="fbImage" data-testid="feedback-image-dropzone">
+                    <img id="fbPreview" class="fb-preview d-none" alt="" />
+                    <i class="bi bi-camera" id="fbIcon"></i>
+                    <strong id="fbName">Attach a photo</strong>
+                    <span class="small text-secondary">JPG, PNG or WebP · max 5 MB</span>
+                    <input type="file" name="image" id="fbImage"
+                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                           class="visually-hidden" data-testid="feedback-image-input" />
+                </label>
+
+                @if (ViewData.ModelState["image"]?.Errors.FirstOrDefault() is { } imgErr)
+                {
+                    <div class="text-danger small" data-testid="feedback-image-error">@imgErr.ErrorMessage</div>
+                }
+
+                <button class="btn btn-gold rounded-pill w-100 mt-3" data-testid="feedback-submit-button">
+                    <i class="bi bi-send me-1"></i>Send feedback
+                </button>
+            </form>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 fw-bold mb-0">My feedback</h3>
+                <span class="small text-secondary" data-testid="feedback-count">@Model.Items.Count submitted</span>
+            </div>
+            <div class="d-grid gap-3" data-testid="feedback-list">
+                @if (!Model.Items.Any())
+                {
+                    <div class="empty-state" data-testid="feedback-empty">
+                        <i class="bi bi-chat-square-heart d-block fs-2 mb-2"></i>You haven't sent any feedback yet.
+                    </div>
+                }
+                @foreach (var f in Model.Items)
+                {
+                    <div class="panel fb-card" data-testid="feedback-item-@f.Id">
+                        <div class="d-flex gap-3">
+                            @if (f.ImageFileName is not null)
+                            {
+                                <a asp-action="Image" asp-route-id="@f.Id" target="_blank"
+                                   class="fb-thumb" data-testid="feedback-image-link-@f.Id">
+                                    <img src="@Url.Action("Image", new { id = f.Id })" alt="Feedback photo" />
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="fb-thumb fb-thumb-icon">
+                                    <i class="bi @f.KindIcon()"></i>
+                                </span>
+                            }
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex flex-wrap justify-content-between gap-2 mb-1">
+                                    <strong data-testid="feedback-subject-@f.Id">@f.Subject</strong>
+                                    <span class="pill @f.StatusPill()" data-testid="feedback-status-@f.Id">@f.StatusText()</span>
+                                </div>
+                                <div class="small text-secondary mb-2">
+                                    @f.KindText() · @(f.Facility?.Name ?? "General") · @AppClock.ToLocal(f.CreatedAt).ToString("dd MMM yyyy, HH:mm")
+                                </div>
+                                <div class="small">@f.Description</div>
+                                @if (!string.IsNullOrEmpty(f.AdminReply))
+                                {
+                                    <div class="fb-reply mt-3" data-testid="feedback-reply-@f.Id">
+                                        <i class="bi bi-reply-fill me-1"></i><strong>PTTA reply:</strong> @f.AdminReply
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <script>
+        document.getElementById('fbImage')?.addEventListener('change', e => {
+            const f = e.target.files[0]; if (!f) return;
+            const img = document.getElementById('fbPreview');
+            img.src = URL.createObjectURL(f);
+            img.classList.remove('d-none');
+            document.getElementById('fbIcon').classList.add('d-none');
+            document.getElementById('fbName').textContent =
+                f.name + (f.size > 5 * 1024 * 1024 ? ' (too large, max 5 MB)' : '');
+        });
+    </script>
+}

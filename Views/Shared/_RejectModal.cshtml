@@ -1,0 +1,27 @@
+﻿@model string
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true" data-testid="reject-modal">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content rounded-4 border-0" method="post" id="rejectForm" asp-controller="Admin" asp-action="Reject">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title font-display">Reject booking <span class="mono" id="rejectRef"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="rejectId" />
+                <input type="hidden" name="returnUrl" value="@Model" />
+                <label class="form-label small fw-semibold">Reason (shared with the user)</label>
+                <textarea name="note" class="form-control" rows="3" placeholder="e.g. Hall reserved for convocation rehearsal." data-testid="reject-reason-input"></textarea>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-danger rounded-pill px-4" data-testid="reject-confirm-button">Reject booking</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    document.getElementById('rejectModal').addEventListener('show.bs.modal', e => {
+        document.getElementById('rejectId').value = e.relatedTarget.dataset.id;
+        document.getElementById('rejectRef').textContent = e.relatedTarget.dataset.ref;
+    });
+</script>
